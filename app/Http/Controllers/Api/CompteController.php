@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CompteResource;
+use App\Models\Client;
 use App\Models\Compte;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Hash;
 
 /**
  * @OA\Info(
@@ -230,11 +233,218 @@ class CompteController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * @OA\Post(
+     *     path="/v1/comptes",
+     *     summary="Créer un nouveau compte",
+     *     description="Crée un nouveau compte bancaire. Si le client n'existe pas, il est créé automatiquement avec génération de mot de passe et code.",
+     *     operationId="createCompte",
+     *     tags={"Comptes"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *             @OA\JsonContent(
+     *             required={"type", "soldeInitial", "devise", "client"},
+     *             @OA\Property(property="type", type="string", enum={"cheque", "courant", "epargne"}, example="cheque"),
+     *             @OA\Property(property="soldeInitial", type="number", format="float", minimum=10000, example=500000),
+     *             @OA\Property(property="devise", type="string", enum={"XAF", "EUR", "USD", "CAD", "GBP"}, example="XAF"),
+     *             @OA\Property(
+     *                 property="client",
+     *                 type="object",
+     *                 @OA\Property(property="id", type="string", format="uuid", nullable=true, example="8f457618-ac42-488b-a2b3-d7d00257ae05"),
+     *                 @OA\Property(property="titulaire", type="string", example="Hawa BB Wane"),
+     *                 @OA\Property(property="email", type="string", format="email", example="cheikh.sy@example.com"),
+     *                 @OA\Property(property="telephone", type="string", example="+221771234567"),
+     *                 @OA\Property(property="adresse", type="string", example="Dakar, Sénégal")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Compte créé avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Compte créé avec succès"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="id", type="string", format="uuid", example="660f9511-f30c-52e5-b827-557766551111"),
+     *                 @OA\Property(property="numeroCompte", type="string", example="C00123460"),
+     *                 @OA\Property(property="titulaire", type="string", example="Cheikh Sy"),
+     *                 @OA\Property(property="type", type="string", enum={"cheque", "courant", "epargne"}, example="cheque"),
+     *                 @OA\Property(property="solde", type="number", format="float", example=500000),
+     *                 @OA\Property(property="devise", type="string", example="XAF"),
+     *                 @OA\Property(property="dateCreation", type="string", format="date-time", example="2025-10-19T10:30:00Z"),
+     *                 @OA\Property(property="statut", type="string", enum={"actif", "inactif", "bloque", "ferme"}, example="actif"),
+     *                 @OA\Property(property="metadata", type="object",
+     *                     @OA\Property(property="derniereModification", type="string", format="date-time", example="2025-10-19T10:30:00Z"),
+     *                     @OA\Property(property="version", type="integer", example=1)
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Données invalides",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(
+     *                 property="error",
+     *                 type="object",
+     *                 @OA\Property(property="code", type="string", example="VALIDATION_ERROR"),
+     *                 @OA\Property(property="message", type="string", example="Les données fournies sont invalides"),
+     *                 @OA\Property(
+     *                     property="details",
+     *                     type="object",
+     *                     @OA\Property(property="titulaire", type="array", @OA\Items(type="string", example="Le nom du titulaire est requis")),
+     *                     @OA\Property(property="soldeInitial", type="array", @OA\Items(type="string", example="Le solde initial doit être supérieur ou égal à 10000"))
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Erreur de validation métier",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="error", type="object",
+     *                 @OA\Property(property="code", type="string", example="BUSINESS_RULE_VIOLATION"),
+     *                 @OA\Property(property="message", type="string", example="Violation d'une règle métier")
+     *             )
+     *         )
+     *     )
+     * )
      */
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
-        //
+        // Validation des données
+        $validated = $request->validate([
+            'type' => 'required|in:cheque,courant,epargne',
+            'soldeInitial' => 'required|numeric|min:10000',
+            'devise' => 'required|string|size:3|in:XAF,EUR,USD,CAD,GBP',
+            'client' => 'required|array',
+            'client.id' => 'nullable|uuid',
+            'client.titulaire' => 'required_without:client.id|string|max:255',
+            'client.email' => 'required_without:client.id|email|unique:users,email',
+            'client.telephone' => 'required_without:client.id|string|regex:/^\+221[0-9]{9}$/|unique:clients,numeroCompte',
+            'client.adresse' => 'required_without:client.id|string|max:500'
+        ]);
+
+        try {
+            // Vérifier si le client existe ou le créer
+            $client = null;
+            if (!empty($validated['client']['id'])) {
+                $client = Client::find($validated['client']['id']);
+                if (!$client) {
+                    // Le client n'existe pas, on le crée avec l'ID fourni
+                    // Créer l'utilisateur d'abord
+                    $password = \Illuminate\Support\Str::random(12);
+                    $user = User::create([
+                        'id' => (string) \Illuminate\Support\Str::uuid(),
+                        'name' => $validated['client']['titulaire'],
+                        'email' => $validated['client']['email'],
+                        'password' => Hash::make($password),
+                        'email_verified_at' => now()
+                    ]);
+
+                    // Générer un code unique pour le client
+                    $code = str_pad(mt_rand(100000, 999999), 6, '0', STR_PAD_LEFT);
+
+                    // Créer le client avec l'ID fourni
+                    $client = new Client();
+                    $client->id = $validated['client']['id']; // Utiliser l'ID fourni
+                    $client->user_id = $user->id;
+                    $client->numeroCompte = Client::generateNumeroCompte();
+                    $client->titulaire = $validated['client']['titulaire'];
+                    $client->type = 'particulier'; // Par défaut pour les nouveaux clients
+                    $client->devise = $validated['devise'];
+                    $client->statut = 'actif';
+                    $client->metadata = [
+                        'telephone' => $validated['client']['telephone'],
+                        'adresse' => $validated['client']['adresse'],
+                        'code_authentification' => $code,
+                        'mot_de_passe_temporaire' => $password,
+                        'date_creation' => now()->toISOString()
+                    ];
+                    $client->save();
+
+                    // TODO: Envoyer email avec mot de passe
+                    // TODO: Envoyer SMS avec code d'authentification
+                }
+            } else {
+                // Créer l'utilisateur d'abord
+                $password = \Illuminate\Support\Str::random(12);
+                $user = User::create([
+                    'id' => (string) \Illuminate\Support\Str::uuid(),
+                    'name' => $validated['client']['titulaire'],
+                    'email' => $validated['client']['email'],
+                    'password' => Hash::make($password),
+                    'email_verified_at' => now()
+                ]);
+
+                // Générer un code unique pour le client
+                $code = str_pad(mt_rand(100000, 999999), 6, '0', STR_PAD_LEFT);
+
+                // Créer le client
+                $client = new Client();
+                $client->id = (string) \Illuminate\Support\Str::uuid();
+                $client->user_id = $user->id;
+                $client->numeroCompte = Client::generateNumeroCompte();
+                $client->titulaire = $validated['client']['titulaire'];
+                $client->type = 'particulier'; // Par défaut pour les nouveaux clients
+                $client->devise = $validated['devise'];
+                $client->statut = 'actif';
+                $client->metadata = [
+                    'telephone' => $validated['client']['telephone'],
+                    'adresse' => $validated['client']['adresse'],
+                    'code_authentification' => $code,
+                    'mot_de_passe_temporaire' => $password,
+                    'date_creation' => now()->toISOString()
+                ];
+                $client->save();
+
+                // TODO: Envoyer email avec mot de passe
+                // TODO: Envoyer SMS avec code d'authentification
+            }
+
+            // Créer le compte
+            $compte = new Compte();
+            $compte->id = (string) \Illuminate\Support\Str::uuid();
+            $compte->client_id = $client->id;
+            $compte->numeroCompte = Compte::generateNumeroCompte();
+            $compte->type = $validated['type'];
+            $compte->devise = $validated['devise'];
+            $compte->statut = 'actif';
+            $compte->solde = $validated['soldeInitial'];
+            $compte->metadata = [
+                'date_creation' => now()->toISOString(),
+                'solde_initial' => $validated['soldeInitial'],
+                'version' => 1
+            ];
+            $compte->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Compte créé avec succès',
+                'data' => CompteResource::make($compte)
+            ], 201);
+
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Gestion des erreurs de base de données (unicité, etc.)
+            if ($e->getCode() == 23000) { // Violation de contrainte d'unicité
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code' => 'DUPLICATE_DATA',
+                        'message' => 'Un client avec cet email ou téléphone existe déjà',
+                        'details' => [
+                            'email' => $validated['client']['email'],
+                            'telephone' => $validated['client']['telephone']
+                        ]
+                    ]
+                ], 422);
+            }
+
+            throw $e;
+        }
     }
 
     /**
