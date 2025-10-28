@@ -99,4 +99,32 @@ class Compte extends Model
     {
         return $this->calculerSolde() >= $montant;
     }
+
+    /**
+     * Scope pour les comptes locaux (actifs uniquement)
+     */
+    public function scopeLocalScope($query)
+    {
+        return $query->where('statut', 'actif');
+    }
+
+    /**
+     * Scope pour les comptes globaux (actifs et inactifs)
+     */
+    public function scopeGlobalScope($query)
+    {
+        return $query->whereIn('statut', ['actif', 'inactif']);
+    }
+
+    /**
+     * Appliquer un scope selon le paramètre
+     */
+    public function scopeApplyScope($query, string $scope = 'global')
+    {
+        if ($scope === 'local') {
+            return $query->localScope();
+        } else {
+            return $query->globalScope();
+        }
+    }
 }
