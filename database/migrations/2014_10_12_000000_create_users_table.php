@@ -19,6 +19,10 @@ return new class extends Migration
             $table->string('password');
             $table->rememberToken();
             $table->timestamps();
+
+            // Index pour améliorer les performances
+            $table->index('email');
+            $table->index('email_verified_at');
         });
     }
 
