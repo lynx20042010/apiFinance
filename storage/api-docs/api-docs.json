@@ -739,6 +739,266 @@
                         }
                     }
                 }
+            },
+            "put": {
+                "tags": [
+                    "Comptes"
+                ],
+                "summary": "Mettre à jour un compte",
+                "description": "Met à jour les informations d'un compte existant. Seuls certains champs peuvent être modifiés pour des raisons de sécurité.",
+                "operationId": "updateCompte",
+                "parameters": [
+                    {
+                        "name": "compteId",
+                        "in": "path",
+                        "description": "ID du compte à mettre à jour",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "cheque",
+                                            "courant",
+                                            "epargne",
+                                            "titre",
+                                            "devise"
+                                        ],
+                                        "example": "courant"
+                                    },
+                                    "devise": {
+                                        "type": "string",
+                                        "enum": [
+                                            "XAF",
+                                            "EUR",
+                                            "USD",
+                                            "CAD",
+                                            "GBP"
+                                        ],
+                                        "example": "EUR"
+                                    },
+                                    "statut": {
+                                        "type": "string",
+                                        "enum": [
+                                            "actif",
+                                            "inactif",
+                                            "bloque",
+                                            "ferme"
+                                        ],
+                                        "example": "actif"
+                                    },
+                                    "metadata": {
+                                        "properties": {
+                                            "agence": {
+                                                "type": "string",
+                                                "maxLength": 100,
+                                                "example": "Agence Centrale Dakar"
+                                            },
+                                            "rib": {
+                                                "type": "string",
+                                                "maxLength": 50,
+                                                "example": "123456789012345678901234567890"
+                                            },
+                                            "iban": {
+                                                "type": "string",
+                                                "maxLength": 50,
+                                                "example": "SN12 3456 7890 1234 5678 9012 345"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Compte mis à jour avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Compte mis à jour avec succès"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid",
+                                                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                                                },
+                                                "numeroCompte": {
+                                                    "type": "string",
+                                                    "example": "C00123456"
+                                                },
+                                                "titulaire": {
+                                                    "type": "string",
+                                                    "example": "Amadou Diallo"
+                                                },
+                                                "type": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "cheque",
+                                                        "courant",
+                                                        "epargne",
+                                                        "titre",
+                                                        "devise"
+                                                    ],
+                                                    "example": "courant"
+                                                },
+                                                "solde": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "example": 1250000
+                                                },
+                                                "devise": {
+                                                    "type": "string",
+                                                    "example": "EUR"
+                                                },
+                                                "dateCreation": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2023-03-15T00:00:00Z"
+                                                },
+                                                "statut": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "actif",
+                                                        "inactif",
+                                                        "bloque",
+                                                        "ferme"
+                                                    ],
+                                                    "example": "actif"
+                                                },
+                                                "metadata": {
+                                                    "properties": {
+                                                        "derniereModification": {
+                                                            "type": "string",
+                                                            "format": "date-time",
+                                                            "example": "2023-06-10T14:30:00Z"
+                                                        },
+                                                        "version": {
+                                                            "type": "integer",
+                                                            "example": 2
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Compte non trouvé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "error": {
+                                            "properties": {
+                                                "code": {
+                                                    "type": "string",
+                                                    "example": "COMPTE_NOT_FOUND"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Le compte avec l'ID spécifié n'existe pas"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Données invalides ou changement non autorisé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "error": {
+                                            "properties": {
+                                                "code": {
+                                                    "type": "string",
+                                                    "example": "VALIDATION_ERROR"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Les données fournies sont invalides"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Opération non autorisée",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "error": {
+                                            "properties": {
+                                                "code": {
+                                                    "type": "string",
+                                                    "example": "OPERATION_NOT_ALLOWED"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Cette opération n'est pas autorisée sur ce compte"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     },

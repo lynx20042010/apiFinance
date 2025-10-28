@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCompteRequest;
+use App\Http\Requests\UpdateCompteRequest;
 use App\Http\Resources\CompteResource;
 use App\Models\Client;
 use App\Models\Compte;
@@ -482,11 +483,192 @@ class CompteController extends Controller
     }
 
     /**
-     * Update the specified resource in storage.
+     * @OA\Put(
+     *     path="/v1/comptes/{compteId}",
+     *     summary="Mettre à jour un compte",
+     *     description="Met à jour les informations d'un compte existant. Seuls certains champs peuvent être modifiés pour des raisons de sécurité.",
+     *     operationId="updateCompte",
+     *     tags={"Comptes"},
+     *     @OA\Parameter(
+     *         name="compteId",
+     *         in="path",
+     *         description="ID du compte à mettre à jour",
+     *         required=true,
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="type", type="string", enum={"cheque", "courant", "epargne", "titre", "devise"}, example="courant"),
+     *             @OA\Property(property="devise", type="string", enum={"XAF", "EUR", "USD", "CAD", "GBP"}, example="EUR"),
+     *             @OA\Property(property="statut", type="string", enum={"actif", "inactif", "bloque", "ferme"}, example="actif"),
+     *             @OA\Property(
+     *                 property="metadata",
+     *                 type="object",
+     *                 @OA\Property(property="agence", type="string", maxLength=100, example="Agence Centrale Dakar"),
+     *                 @OA\Property(property="rib", type="string", maxLength=50, example="123456789012345678901234567890"),
+     *                 @OA\Property(property="iban", type="string", maxLength=50, example="SN12 3456 7890 1234 5678 9012 345")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Compte mis à jour avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Compte mis à jour avec succès"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="id", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
+     *                 @OA\Property(property="numeroCompte", type="string", example="C00123456"),
+     *                 @OA\Property(property="titulaire", type="string", example="Amadou Diallo"),
+     *                 @OA\Property(property="type", type="string", enum={"cheque", "courant", "epargne", "titre", "devise"}, example="courant"),
+     *                 @OA\Property(property="solde", type="number", format="float", example=1250000),
+     *                 @OA\Property(property="devise", type="string", example="EUR"),
+     *                 @OA\Property(property="dateCreation", type="string", format="date-time", example="2023-03-15T00:00:00Z"),
+     *                 @OA\Property(property="statut", type="string", enum={"actif", "inactif", "bloque", "ferme"}, example="actif"),
+     *                 @OA\Property(property="metadata", type="object",
+     *                     @OA\Property(property="derniereModification", type="string", format="date-time", example="2023-06-10T14:30:00Z"),
+     *                     @OA\Property(property="version", type="integer", example=2)
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Compte non trouvé",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(
+     *                 property="error",
+     *                 type="object",
+     *                 @OA\Property(property="code", type="string", example="COMPTE_NOT_FOUND"),
+     *                 @OA\Property(property="message", type="string", example="Le compte avec l'ID spécifié n'existe pas")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Données invalides ou changement non autorisé",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(
+     *                 property="error",
+     *                 type="object",
+     *                 @OA\Property(property="code", type="string", example="VALIDATION_ERROR"),
+     *                 @OA\Property(property="message", type="string", example="Les données fournies sont invalides")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Opération non autorisée",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(
+     *                 property="error",
+     *                 type="object",
+     *                 @OA\Property(property="code", type="string", example="OPERATION_NOT_ALLOWED"),
+     *                 @OA\Property(property="message", type="string", example="Cette opération n'est pas autorisée sur ce compte")
+     *             )
+     *         )
+     *     )
+     * )
      */
-    public function update(Request $request, string $id)
+    public function update(UpdateCompteRequest $request, string $compteId): JsonResponse
     {
-        //
+        // Validation de l'UUID
+        if (!\Illuminate\Support\Str::isUuid($compteId)) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'INVALID_UUID',
+                    'message' => 'L\'ID du compte doit être un UUID valide',
+                    'details' => [
+                        'compteId' => $compteId
+                    ]
+                ]
+            ], 400);
+        }
+
+        // Recherche du compte
+        $compte = Compte::find($compteId);
+
+        if (!$compte) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'COMPTE_NOT_FOUND',
+                    'message' => 'Le compte avec l\'ID spécifié n\'existe pas',
+                    'details' => [
+                        'compteId' => $compteId
+                    ]
+                ]
+            ], 404);
+        }
+
+        // Vérifications de sécurité avant mise à jour
+        $validated = $request->validated();
+
+        // Vérifier si le compte peut être modifié (pas fermé définitivement)
+        if ($compte->statut === 'ferme') {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'OPERATION_NOT_ALLOWED',
+                    'message' => 'Impossible de modifier un compte fermé',
+                    'details' => [
+                        'compteId' => $compteId,
+                        'statut' => $compte->statut
+                    ]
+                ]
+            ], 403);
+        }
+
+        // Vérifier les changements de devise (seulement si solde = 0)
+        if (isset($validated['devise']) && $validated['devise'] !== $compte->devise) {
+            if ($compte->solde > 0) {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code' => 'OPERATION_NOT_ALLOWED',
+                        'message' => 'Impossible de changer la devise d\'un compte avec un solde positif',
+                        'details' => [
+                            'compteId' => $compteId,
+                            'soldeActuel' => $compte->solde,
+                            'deviseActuelle' => $compte->devise,
+                            'nouvelleDevise' => $validated['devise']
+                        ]
+                    ]
+                ], 403);
+            }
+        }
+
+        try {
+            // Mise à jour du compte
+            $compte->update($validated);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Compte mis à jour avec succès',
+                'data' => CompteResource::make($compte)
+            ]);
+
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Gestion des erreurs de base de données
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'DATABASE_ERROR',
+                    'message' => 'Erreur lors de la mise à jour du compte',
+                    'details' => [
+                        'compteId' => $compteId,
+                        'error' => $e->getMessage()
+                    ]
+                ]
+            ], 500);
+        }
     }
 
     /**
