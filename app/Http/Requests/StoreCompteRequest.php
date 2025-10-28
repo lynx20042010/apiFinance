@@ -22,17 +22,15 @@ class StoreCompteRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'client_id' => 'required|uuid|exists:clients,id',
-            'numeroCompte' => 'sometimes|string|unique:comptes,numeroCompte|regex:/^CPT\d{10}$/',
-            'type' => 'required|in:courant,epargne,titre,devise',
+            'type' => 'required|in:cheque,courant,epargne,titre,devise',
+            'soldeInitial' => 'required|numeric|min:10000',
             'devise' => 'required|string|size:3|in:XAF,EUR,USD,CAD,GBP',
-            'statut' => 'sometimes|in:actif,inactif,bloque,ferme',
-            'solde' => 'sometimes|numeric|min:0',
-            'metadata' => 'sometimes|array',
-            'metadata.date_ouverture' => 'sometimes|date|before_or_equal:today',
-            'metadata.agence' => 'sometimes|string|max:100',
-            'metadata.rib' => 'sometimes|string|max:50',
-            'metadata.iban' => 'sometimes|string|max:50'
+            'client' => 'required|array',
+            'client.id' => 'nullable|string',
+            'client.titulaire' => 'required_without:client.id|string|max:255',
+            'client.email' => 'required_without:client.id|email|unique:users,email',
+            'client.telephone' => 'required_without:client.id|string|regex:/^\+221[0-9]{9}$/',
+            'client.adresse' => 'required_without:client.id|string|max:500'
         ];
     }
 
@@ -42,20 +40,29 @@ class StoreCompteRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'client_id.required' => 'Le client est obligatoire.',
-            'client_id.uuid' => 'L\'ID client doit être un UUID valide.',
-            'client_id.exists' => 'Le client spécifié n\'existe pas.',
-            'numeroCompte.unique' => 'Ce numéro de compte est déjà utilisé.',
-            'numeroCompte.regex' => 'Le format du numéro de compte est invalide.',
             'type.required' => 'Le type de compte est obligatoire.',
-            'type.in' => 'Le type doit être courant, épargne, titre ou devise.',
+            'type.in' => 'Le type doit être cheque, courant, épargne, titre ou devise.',
+            'soldeInitial.required' => 'Le solde initial est obligatoire.',
+            'soldeInitial.numeric' => 'Le solde initial doit être un nombre.',
+            'soldeInitial.min' => 'Le solde initial doit être d\'au moins 10 000.',
             'devise.required' => 'La devise est obligatoire.',
             'devise.size' => 'La devise doit contenir exactement 3 caractères.',
             'devise.in' => 'La devise doit être XAF, EUR, USD, CAD ou GBP.',
-            'statut.in' => 'Le statut doit être actif, inactif, bloqué ou fermé.',
-            'solde.numeric' => 'Le solde doit être un nombre.',
-            'solde.min' => 'Le solde ne peut pas être négatif.',
-            'metadata.array' => 'Les métadonnées doivent être un tableau.',
+            'client.required' => 'Les informations du client sont obligatoires.',
+            'client.array' => 'Les informations du client doivent être un tableau.',
+            'client.id.uuid' => 'L\'ID client doit être un UUID valide.',
+            'client.titulaire.required_without' => 'Le nom du titulaire est obligatoire.',
+            'client.titulaire.string' => 'Le nom du titulaire doit être une chaîne de caractères.',
+            'client.titulaire.max' => 'Le nom du titulaire ne peut pas dépasser 255 caractères.',
+            'client.email.required_without' => 'L\'email est obligatoire.',
+            'client.email.email' => 'L\'email doit être valide.',
+            'client.email.unique' => 'Cet email est déjà utilisé.',
+            'client.telephone.required_without' => 'Le téléphone est obligatoire.',
+            'client.telephone.string' => 'Le téléphone doit être une chaîne de caractères.',
+            'client.telephone.regex' => 'Le format du téléphone est invalide (+221XXXXXXXXX).',
+            'client.adresse.required_without' => 'L\'adresse est obligatoire.',
+            'client.adresse.string' => 'L\'adresse doit être une chaîne de caractères.',
+            'client.adresse.max' => 'L\'adresse ne peut pas dépasser 500 caractères.',
         ];
     }
 
@@ -64,22 +71,7 @@ class StoreCompteRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        if (!$this->has('numeroCompte') || empty($this->numeroCompte)) {
-            $this->merge([
-                'numeroCompte' => \App\Models\Compte::generateNumeroCompte()
-            ]);
-        }
-
-        if (!$this->has('statut')) {
-            $this->merge([
-                'statut' => 'actif'
-            ]);
-        }
-
-        if (!$this->has('solde')) {
-            $this->merge([
-                'solde' => 0
-            ]);
-        }
+        // Préparation automatique des données si nécessaire
+        // Les valeurs par défaut sont gérées dans les modèles et observers
     }
 }

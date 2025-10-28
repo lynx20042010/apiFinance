@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreCompteRequest;
 use App\Http\Resources\CompteResource;
 use App\Models\Client;
 use App\Models\Compte;
@@ -313,113 +314,17 @@ class CompteController extends Controller
      *     )
      * )
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreCompteRequest $request): JsonResponse
     {
-        // Validation des données
-        $validated = $request->validate([
-            'type' => 'required|in:cheque,courant,epargne',
-            'soldeInitial' => 'required|numeric|min:10000',
-            'devise' => 'required|string|size:3|in:XAF,EUR,USD,CAD,GBP',
-            'client' => 'required|array',
-            'client.id' => 'nullable|uuid',
-            'client.titulaire' => 'required_without:client.id|string|max:255',
-            'client.email' => 'required_without:client.id|email|unique:users,email',
-            'client.telephone' => 'required_without:client.id|string|regex:/^\+221[0-9]{9}$/|unique:clients,numeroCompte',
-            'client.adresse' => 'required_without:client.id|string|max:500'
-        ]);
-
         try {
-            // Vérifier si le client existe ou le créer
-            $client = null;
-            if (!empty($validated['client']['id'])) {
-                $client = Client::find($validated['client']['id']);
-                if (!$client) {
-                    // Le client n'existe pas, on le crée avec l'ID fourni
-                    // Créer l'utilisateur d'abord
-                    $password = \Illuminate\Support\Str::random(12);
-                    $user = User::create([
-                        'id' => (string) \Illuminate\Support\Str::uuid(),
-                        'name' => $validated['client']['titulaire'],
-                        'email' => $validated['client']['email'],
-                        'password' => Hash::make($password),
-                        'email_verified_at' => now()
-                    ]);
+            // Les données sont déjà validées par StoreCompteRequest
+            $validated = $request->validated();
 
-                    // Générer un code unique pour le client
-                    $code = str_pad(mt_rand(100000, 999999), 6, '0', STR_PAD_LEFT);
-
-                    // Créer le client avec l'ID fourni
-                    $client = new Client();
-                    $client->id = $validated['client']['id']; // Utiliser l'ID fourni
-                    $client->user_id = $user->id;
-                    $client->numeroCompte = Client::generateNumeroCompte();
-                    $client->titulaire = $validated['client']['titulaire'];
-                    $client->type = 'particulier'; // Par défaut pour les nouveaux clients
-                    $client->devise = $validated['devise'];
-                    $client->statut = 'actif';
-                    $client->metadata = [
-                        'telephone' => $validated['client']['telephone'],
-                        'adresse' => $validated['client']['adresse'],
-                        'code_authentification' => $code,
-                        'mot_de_passe_temporaire' => $password,
-                        'date_creation' => now()->toISOString()
-                    ];
-                    $client->save();
-
-                    // TODO: Envoyer email avec mot de passe
-                    // TODO: Envoyer SMS avec code d'authentification
-                }
-            } else {
-                // Créer l'utilisateur d'abord
-                $password = \Illuminate\Support\Str::random(12);
-                $user = User::create([
-                    'id' => (string) \Illuminate\Support\Str::uuid(),
-                    'name' => $validated['client']['titulaire'],
-                    'email' => $validated['client']['email'],
-                    'password' => Hash::make($password),
-                    'email_verified_at' => now()
-                ]);
-
-                // Générer un code unique pour le client
-                $code = str_pad(mt_rand(100000, 999999), 6, '0', STR_PAD_LEFT);
-
-                // Créer le client
-                $client = new Client();
-                $client->id = (string) \Illuminate\Support\Str::uuid();
-                $client->user_id = $user->id;
-                $client->numeroCompte = Client::generateNumeroCompte();
-                $client->titulaire = $validated['client']['titulaire'];
-                $client->type = 'particulier'; // Par défaut pour les nouveaux clients
-                $client->devise = $validated['devise'];
-                $client->statut = 'actif';
-                $client->metadata = [
-                    'telephone' => $validated['client']['telephone'],
-                    'adresse' => $validated['client']['adresse'],
-                    'code_authentification' => $code,
-                    'mot_de_passe_temporaire' => $password,
-                    'date_creation' => now()->toISOString()
-                ];
-                $client->save();
-
-                // TODO: Envoyer email avec mot de passe
-                // TODO: Envoyer SMS avec code d'authentification
-            }
+            // Créer ou récupérer le client
+            $client = $this->createOrFindClient($validated['client']);
 
             // Créer le compte
-            $compte = new Compte();
-            $compte->id = (string) \Illuminate\Support\Str::uuid();
-            $compte->client_id = $client->id;
-            $compte->numeroCompte = Compte::generateNumeroCompte();
-            $compte->type = $validated['type'];
-            $compte->devise = $validated['devise'];
-            $compte->statut = 'actif';
-            $compte->solde = $validated['soldeInitial'];
-            $compte->metadata = [
-                'date_creation' => now()->toISOString(),
-                'solde_initial' => $validated['soldeInitial'],
-                'version' => 1
-            ];
-            $compte->save();
+            $compte = $this->createCompte($client, $validated);
 
             return response()->json([
                 'success' => true,
@@ -436,8 +341,8 @@ class CompteController extends Controller
                         'code' => 'DUPLICATE_DATA',
                         'message' => 'Un client avec cet email ou téléphone existe déjà',
                         'details' => [
-                            'email' => $validated['client']['email'],
-                            'telephone' => $validated['client']['telephone']
+                            'email' => $validated['client']['email'] ?? null,
+                            'telephone' => $validated['client']['telephone'] ?? null
                         ]
                     ]
                 ], 422);
@@ -582,6 +487,144 @@ class CompteController extends Controller
     public function update(Request $request, string $id)
     {
         //
+    }
+
+    /**
+     * Méthodes privées pour la logique métier
+     */
+    private function createOrFindClient(array $clientData): Client
+    {
+        if (!empty($clientData['id'])) {
+            // Essayer de trouver le client existant
+            try {
+                $client = Client::find($clientData['id']);
+                if ($client) {
+                    return $client;
+                }
+            } catch (\Exception $e) {
+                // Si l'UUID est invalide, on génère un nouvel UUID
+                $clientData['id'] = (string) \Illuminate\Support\Str::uuid();
+            }
+
+            // Si le client n'existe pas, on le crée avec l'ID fourni (ou généré)
+            // Créer l'utilisateur d'abord
+            $password = \Illuminate\Support\Str::random(12);
+            $user = User::create([
+                'id' => (string) \Illuminate\Support\Str::uuid(),
+                'name' => $clientData['titulaire'],
+                'email' => $clientData['email'],
+                'password' => Hash::make($password),
+                'email_verified_at' => now()
+            ]);
+
+            // Générer un code unique pour le client
+            $code = str_pad(mt_rand(100000, 999999), 6, '0', STR_PAD_LEFT);
+
+            // Créer le client avec l'ID fourni (maintenant valide)
+            $client = new Client();
+            $client->id = $clientData['id'];
+            $client->user_id = $user->id;
+            $client->numeroCompte = Client::generateNumeroCompte();
+            $client->titulaire = $clientData['titulaire'];
+            $client->type = 'particulier';
+            $client->devise = 'XAF';
+            $client->statut = 'actif';
+            $client->metadata = [
+                'telephone' => $clientData['telephone'],
+                'adresse' => $clientData['adresse'],
+                'code_authentification' => $code,
+                'mot_de_passe_temporaire' => $password,
+                'date_creation' => now()->toISOString()
+            ];
+            $client->save();
+
+            return $client;
+        }
+
+        // Si aucun ID n'est fourni, générer un UUID et créer le client
+        // Créer l'utilisateur d'abord
+        $password = \Illuminate\Support\Str::random(12);
+        $user = User::create([
+            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'name' => $clientData['titulaire'],
+            'email' => $clientData['email'],
+            'password' => Hash::make($password),
+            'email_verified_at' => now()
+        ]);
+
+        // Générer un code unique pour le client
+        $code = str_pad(mt_rand(100000, 999999), 6, '0', STR_PAD_LEFT);
+
+        // Créer le client avec un UUID généré
+        $client = new Client();
+        $client->id = (string) \Illuminate\Support\Str::uuid(); // Générer un nouvel UUID
+        $client->user_id = $user->id;
+        $client->numeroCompte = Client::generateNumeroCompte();
+        $client->titulaire = $clientData['titulaire'];
+        $client->type = 'particulier';
+        $client->devise = 'XAF';
+        $client->statut = 'actif';
+        $client->metadata = [
+            'telephone' => $clientData['telephone'],
+            'adresse' => $clientData['adresse'],
+            'code_authentification' => $code,
+            'mot_de_passe_temporaire' => $password,
+            'date_creation' => now()->toISOString()
+        ];
+        $client->save();
+
+        return $client;
+
+        // Créer l'utilisateur d'abord
+        $password = \Illuminate\Support\Str::random(12);
+        $user = User::create([
+            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'name' => $clientData['titulaire'],
+            'email' => $clientData['email'],
+            'password' => Hash::make($password),
+            'email_verified_at' => now()
+        ]);
+
+        // Générer un code unique pour le client
+        $code = str_pad(mt_rand(100000, 999999), 6, '0', STR_PAD_LEFT);
+
+        // Créer le client
+        $client = Client::create([
+            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'user_id' => $user->id,
+            'numeroCompte' => Client::generateNumeroCompte(),
+            'titulaire' => $clientData['titulaire'],
+            'type' => 'particulier',
+            'devise' => 'XAF',
+            'statut' => 'actif',
+            'metadata' => [
+                'telephone' => $clientData['telephone'],
+                'adresse' => $clientData['adresse'],
+                'code_authentification' => $code,
+                'mot_de_passe_temporaire' => $password,
+                'date_creation' => now()->toISOString()
+            ]
+        ]);
+
+        return $client;
+    }
+
+    private function createCompte(Client $client, array $validated): Compte
+    {
+        return Compte::create([
+            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'client_id' => $client->id,
+            'numeroCompte' => Compte::generateNumeroCompte(),
+            'type' => $validated['type'],
+            'devise' => $validated['devise'],
+            'statut' => 'actif',
+            'solde' => $validated['soldeInitial'],
+            'metadata' => [
+                'date_creation' => now()->toISOString(),
+                'solde_initial' => $validated['soldeInitial'],
+                'version' => 1
+            ]
+        ]);
     }
 
     /**

@@ -39,8 +39,28 @@ class Compte extends Model
         parent::boot();
 
         static::creating(function ($compte) {
+            // Générer un UUID pour l'ID si non fourni
+            if (empty($compte->id)) {
+                $compte->id = (string) \Illuminate\Support\Str::uuid();
+            }
+
+            // Générer un numéro de compte unique si non fourni
             if (empty($compte->numeroCompte)) {
                 $compte->numeroCompte = self::generateNumeroCompte();
+            }
+
+            // Définir le statut par défaut
+            if (empty($compte->statut)) {
+                $compte->statut = 'actif';
+            }
+
+            // Initialiser les métadonnées
+            if (empty($compte->metadata)) {
+                $compte->metadata = [
+                    'date_creation' => now()->toISOString(),
+                    'solde_initial' => $compte->solde ?? 0,
+                    'version' => 1
+                ];
             }
         });
     }
