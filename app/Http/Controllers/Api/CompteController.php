@@ -47,18 +47,11 @@ class CompteController extends Controller
      *         @OA\Schema(type="integer", minimum=1, maximum=100, default=10)
      *     ),
      *     @OA\Parameter(
-     *         name="scope",
-     *         in="query",
-     *         description="Portée des résultats (local/global)",
-     *         required=false,
-     *         @OA\Schema(type="string", enum={"local", "global"}, default="global")
-     *     ),
-     *     @OA\Parameter(
      *         name="type",
      *         in="query",
      *         description="Type de compte",
      *         required=false,
-     *         @OA\Schema(type="string", enum={"courant", "epargne", "titre", "devise"})
+     *         @OA\Schema(type="string", enum={"cheque", "courant", "epargne"})
      *     ),
      *     @OA\Parameter(
      *         name="statut",
@@ -100,7 +93,7 @@ class CompteController extends Controller
      *                     @OA\Property(property="id", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
      *                     @OA\Property(property="numeroCompte", type="string", example="C00123456"),
      *                     @OA\Property(property="titulaire", type="string", example="Amadou Diallo"),
-     *                     @OA\Property(property="type", type="string", enum={"courant", "epargne", "titre", "devise"}, example="epargne"),
+     *                 @OA\Property(property="type", type="string", enum={"cheque", "courant", "epargne"}, example="epargne"),
      *                     @OA\Property(property="solde", type="number", format="float", example=1250000),
      *                     @OA\Property(property="devise", type="string", example="XAF"),
      *                     @OA\Property(property="dateCreation", type="string", format="date-time", example="2023-03-15T00:00:00Z"),
@@ -149,20 +142,15 @@ class CompteController extends Controller
         $request->validate([
             'page' => 'sometimes|integer|min:1',
             'limit' => 'sometimes|integer|min:1|max:100',
-            'scope' => 'sometimes|in:local,global',
-            'type' => 'sometimes|in:courant,epargne,titre,devise',
+            'type' => 'sometimes|in:cheque,courant,epargne',
             'statut' => 'sometimes|in:actif,inactif,bloque,ferme',
             'search' => 'sometimes|string|max:255',
             'sort' => 'sometimes|in:dateCreation,solde,titulaire,numeroCompte',
             'order' => 'sometimes|in:asc,desc'
         ]);
 
-        // Construction de la requête avec filtrage par défaut
-        $query = Compte::with(['client.user']);
-
-        // Application du scope depuis le modèle
-        $scope = $request->get('scope', 'global');
-        $query->applyScope($scope);
+        // Construction de la requête avec filtrage par défaut (seulement comptes actifs)
+        $query = Compte::with(['client.user'])->where('statut', 'actif');
 
         // Filtres
         if ($request->has('type') && !empty($request->type)) {
@@ -250,11 +238,132 @@ class CompteController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * @OA\Get(
+     *     path="/v1/comptes/{compteId}",
+     *     summary="Récupérer un compte spécifique",
+     *     description="Récupère les détails d'un compte spécifique. Admin peut voir tous les comptes, Client seulement les siens.",
+     *     operationId="getCompte",
+     *     tags={"Comptes"},
+     *     @OA\Parameter(
+     *         name="compteId",
+     *         in="path",
+     *         description="ID du compte à récupérer",
+     *         required=true,
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Détails du compte récupérés avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="id", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
+     *                 @OA\Property(property="numeroCompte", type="string", example="C00123456"),
+     *                 @OA\Property(property="titulaire", type="string", example="Amadou Diallo"),
+     *                 @OA\Property(property="type", type="string", enum={"cheque", "courant", "epargne"}, example="epargne"),
+     *                 @OA\Property(property="solde", type="number", format="float", example=1250000),
+     *                 @OA\Property(property="devise", type="string", example="XAF"),
+     *                 @OA\Property(property="dateCreation", type="string", format="date-time", example="2023-03-15T00:00:00Z"),
+     *                 @OA\Property(property="statut", type="string", enum={"actif", "inactif", "bloque", "ferme"}, example="bloque"),
+     *                 @OA\Property(property="motifBlocage", type="string", nullable=true, example="Inactivité de 30+ jours"),
+     *                 @OA\Property(property="metadata", type="object",
+     *                     @OA\Property(property="derniereModification", type="string", format="date-time", example="2023-06-10T14:30:00Z"),
+     *                     @OA\Property(property="version", type="integer", example=1)
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Compte non trouvé",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(
+     *                 property="error",
+     *                 type="object",
+     *                 @OA\Property(property="code", type="string", example="COMPTE_NOT_FOUND"),
+     *                 @OA\Property(property="message", type="string", example="Le compte avec l'ID spécifié n'existe pas"),
+     *                 @OA\Property(
+     *                     property="details",
+     *                     type="object",
+     *                     @OA\Property(property="compteId", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="ID invalide",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(
+     *                 property="error",
+     *                 type="object",
+     *                 @OA\Property(property="code", type="string", example="INVALID_UUID"),
+     *                 @OA\Property(property="message", type="string", example="L'ID du compte doit être un UUID valide"),
+     *                 @OA\Property(
+     *                     property="details",
+     *                     type="object",
+     *                     @OA\Property(property="compteId", type="string", example="invalid-id")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Accès non autorisé",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="error", type="object",
+     *                 @OA\Property(property="code", type="string", example="ACCESS_DENIED"),
+     *                 @OA\Property(property="message", type="string", example="Vous n'avez pas accès à ce compte")
+     *             )
+     *         )
+     *     )
+     * )
      */
-    public function show(string $id)
+    public function show(string $compteId): JsonResponse
     {
-        //
+        // Validation de l'UUID
+        if (!\Illuminate\Support\Str::isUuid($compteId)) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'INVALID_UUID',
+                    'message' => 'L\'ID du compte doit être un UUID valide',
+                    'details' => [
+                        'compteId' => $compteId
+                    ]
+                ]
+            ], 400);
+        }
+
+        // Recherche du compte avec relations
+        $compte = Compte::with(['client.user'])->find($compteId);
+
+        if (!$compte) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'COMPTE_NOT_FOUND',
+                    'message' => 'Le compte avec l\'ID spécifié n\'existe pas',
+                    'details' => [
+                        'compteId' => $compteId
+                    ]
+                ]
+            ], 404);
+        }
+
+        // TODO: Implémenter la logique d'autorisation
+        // Pour l'instant, on permet l'accès à tous les comptes
+        // Plus tard, vérifier si l'utilisateur est admin ou propriétaire du compte
+
+        return response()->json([
+            'success' => true,
+            'data' => CompteResource::make($compte)
+        ]);
     }
 
     /**

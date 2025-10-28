@@ -15,7 +15,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('client_id')->constrained()->onDelete('cascade');
             $table->string('numeroCompte')->unique();
-            $table->enum('type', ['courant', 'epargne', 'titre', 'devise']);
+            $table->enum('type', ['cheque', 'courant', 'epargne']);
             $table->string('devise', 3)->default('XAF');
             $table->enum('statut', ['actif', 'inactif', 'bloque', 'ferme'])->default('actif');
             $table->decimal('solde', 15, 2)->default(0);
