@@ -1,66 +1,251 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# API Finance - Gestion des Comptes Bancaires
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Une API RESTful moderne développée avec Laravel 10 pour la gestion complète des comptes bancaires et transactions financières.
 
-## About Laravel
+## 🚀 Fonctionnalités
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+### Gestion des Clients
+- ✅ Création automatique de clients avec génération de comptes
+- ✅ Gestion des informations personnelles (nom, email, téléphone, adresse)
+- ✅ Authentification automatique avec génération de mot de passe temporaire
+- ✅ Support des clients particuliers et entreprises
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### Gestion des Comptes
+- ✅ Création de comptes (courant, épargne, titre, devise)
+- ✅ Gestion des soldes et devises multiples (XAF, EUR, USD, CAD, GBP)
+- ✅ Statuts de comptes (actif, inactif, bloqué, fermé, archivé)
+- ✅ Numéros de compte uniques générés automatiquement
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Gestion des Transactions
+- ✅ Types de transactions : dépôt, retrait, virement, transfert, commission, intérêt
+- ✅ Suivi des statuts (en attente, traitée, annulée, échouée)
+- ✅ Historique complet avec métadonnées
 
-## Learning Laravel
+### Opérations Avancées
+- ✅ Blocage/déblocage des comptes épargne
+- ✅ Archivage des comptes fermés
+- ✅ Suppression sécurisée avec vérifications
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## 🏗️ Architecture
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+### Base de Données (PostgreSQL)
+```
+User (UUID) ────1:N─── Client (UUID)
+    │                     │
+    │                     │
+    └──1:1─── Admin       └──1:N─── Compte (UUID)
+                              │
+                              └──1:N─── Transaction (UUID)
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Technologies Utilisées
+- **Laravel 10** - Framework PHP moderne
+- **PostgreSQL** - Base de données robuste
+- **Laravel Passport** - Authentification OAuth2
+- **Laravel Debugbar** - Outil de débogage (désactivé en prod)
+- **Swagger/OpenAPI** - Documentation interactive
+- **Docker** - Conteneurisation
 
-## Laravel Sponsors
+## 📋 Prérequis
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+- PHP 8.1+
+- Composer
+- PostgreSQL 12+
+- Docker & Docker Compose (optionnel)
 
-### Premium Partners
+## 🛠️ Installation
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+### Installation Locale (avec Docker)
 
-## Contributing
+1. **Cloner le projet**
+```bash
+git clone <repository-url>
+cd apiFinance
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+2. **Configuration Docker**
+```bash
+# Le docker-compose.yml est déjà configuré
+docker compose up --build
+```
 
-## Code of Conduct
+3. **Configuration de la base de données**
+```bash
+# Dans le container Docker
+php artisan migrate
+php artisan passport:install
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Installation Traditionnelle
 
-## Security Vulnerabilities
+1. **Installation des dépendances**
+```bash
+composer install
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+2. **Configuration**
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-## License
+3. **Base de données**
+```bash
+# Configurer PostgreSQL dans .env
+php artisan migrate
+php artisan passport:install
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## ⚙️ Configuration
+
+### Variables d'Environnement (.env)
+
+```env
+# Application
+APP_NAME=apiFinance
+APP_ENV=local
+APP_KEY=base64:...
+APP_DEBUG=true
+APP_URL=http://localhost:8000
+
+# Base de données PostgreSQL
+DB_CONNECTION=pgsql
+DB_HOST=dpg-d40bs9jipnbc73cirh4g-a.oregon-postgres.render.com
+DB_PORT=5432
+DB_DATABASE=apifinacedb
+DB_USERNAME=apifinacedb_user
+DB_PASSWORD=vqZVTXI4pkrE6Txg4Ell6McKz7qJncj9
+
+# Debugbar (désactivé en production)
+DEBUGBAR_ENABLED=false
+```
+
+## 📚 Documentation API
+
+### Accès à la Documentation
+- **Production** : `https://apifinance.onrender.com/ndeyendiaye/documentation`
+- **Local** : `http://localhost:8000/docs`
+
+### Authentification
+L'API utilise OAuth2 avec Laravel Passport :
+- **Client Personnel** : Pour les applications mobiles
+- **Client Mot de Passe** : Pour l'authentification utilisateur
+
+## 🔌 Endpoints API
+
+### Comptes (`/api/v1/comptes`)
+
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/api/v1/comptes` | Lister les comptes (avec pagination/filtres) |
+| POST | `/api/v1/comptes` | Créer un nouveau compte |
+| GET | `/api/v1/comptes/{id}` | Détails d'un compte |
+| PUT | `/api/v1/comptes/{id}` | Modifier un compte |
+| POST | `/api/v1/comptes/{id}/block` | Bloquer un compte épargne |
+| POST | `/api/v1/comptes/{id}/unblock` | Débloquer un compte épargne |
+| POST | `/api/v1/comptes/{id}/archive` | Archiver un compte fermé |
+| POST | `/api/v1/comptes/{id}/unarchive` | Désarchiver un compte |
+| DELETE | `/api/v1/comptes/{id}` | Supprimer un compte |
+
+### Exemple de Création de Compte
+
+```bash
+curl -X POST https://apifinance.onrender.com/api/v1/comptes \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "courant",
+    "soldeInitial": 50000,
+    "devise": "XAF",
+    "client": {
+      "titulaire": "Jean Dupont",
+      "email": "jean@example.com",
+      "telephone": "+221771234567",
+      "adresse": "Dakar, Sénégal"
+    }
+  }'
+```
+
+**Réponse :**
+```json
+{
+  "success": true,
+  "message": "Compte créé avec succès",
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "numeroCompte": "CPT2025000001",
+    "titulaire": "Jean Dupont",
+    "type": "courant",
+    "solde": 50000,
+    "devise": "XAF",
+    "statut": "actif",
+    "dateCreation": "2025-10-29T06:46:50Z"
+  }
+}
+```
+
+## 🧪 Tests
+
+### Exécution des Tests
+```bash
+php artisan test
+```
+
+### Tests Disponibles
+- ✅ Tests des modèles (Client, Compte, Transaction)
+- ✅ Tests des contrôleurs API
+- ✅ Tests des factories
+- ✅ Tests des requêtes de validation
+
+## 🚀 Déploiement
+
+### Sur Render
+Le projet est configuré pour le déploiement sur Render avec :
+- ✅ `render.yaml` pour la configuration
+- ✅ Docker support
+- ✅ Variables d'environnement
+- ✅ Base de données PostgreSQL externe
+
+### Commandes de Déploiement
+```bash
+# Build et déploiement
+docker build -t apifinance .
+docker run -p 8000:8000 apifinance
+```
+
+## 🔒 Sécurité
+
+- ✅ Authentification OAuth2 avec Passport
+- ✅ Validation stricte des données d'entrée
+- ✅ Protection CSRF
+- ✅ Sanitisation des entrées
+- ✅ Logs d'audit pour les opérations sensibles
+
+## 📊 Monitoring
+
+- ✅ Laravel Debugbar (développement uniquement)
+- ✅ Logs structurés
+- ✅ Métriques de performance
+- ✅ Gestion d'erreurs complète
+
+## 🤝 Contribution
+
+1. Fork le projet
+2. Créer une branche feature (`git checkout -b feature/AmazingFeature`)
+3. Commit les changements (`git commit -m 'Add some AmazingFeature'`)
+4. Push vers la branche (`git push origin feature/AmazingFeature`)
+5. Ouvrir une Pull Request
+
+## 📝 Licence
+
+Ce projet est sous licence MIT - voir le fichier [LICENSE](LICENSE) pour plus de détails.
+
+## 📞 Support
+
+Pour toute question ou problème :
+- 📧 Email : support@apifinance.com
+- 📚 Documentation : `https://apifinance.onrender.com/ndeyendiaye/documentation`
+- 🐛 Issues : GitHub Issues
+
+---
+
+**Développé avec ❤️ par l'équipe API Finance**

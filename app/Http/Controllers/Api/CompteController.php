@@ -361,13 +361,13 @@ class CompteController extends Controller
      * @OA\Get(
      *     path="/v1/comptes/{compteId}",
      *     summary="Récupérer un compte spécifique",
-     *     description="Récupère les détails d'un compte spécifique. Admin peut voir tous les comptes, Client seulement les siens.",
+     *     description="Récupère les détails d'un compte spécifique par ID UUID ou numéro de compte. Admin peut voir tous les comptes, Client seulement les siens.",
      *     operationId="getCompte",
      *     tags={"Comptes"},
      *     @OA\Parameter(
      *         name="compteId",
      *         in="path",
-     *         description="ID du compte à récupérer",
+     *         description="ID UUID ou numéro de compte à récupérer",
      *         required=true,
      *         @OA\Schema(type="string", format="uuid")
      *     ),
@@ -446,31 +446,17 @@ class CompteController extends Controller
      */
     public function show(string $compteId): JsonResponse
     {
-        // Validation de l'UUID
-        if (!\Illuminate\Support\Str::isUuid($compteId)) {
-            return response()->json([
-                'success' => false,
-                'error' => [
-                    'code' => 'INVALID_UUID',
-                    'message' => 'L\'ID du compte doit être un UUID valide',
-                    'details' => [
-                        'compteId' => $compteId
-                    ]
-                ]
-            ], 400);
-        }
-
-        // Recherche du compte avec relations
-        $compte = Compte::with(['client.user'])->find($compteId);
+        // Recherche du compte par numéro de compte uniquement
+        $compte = Compte::with(['client.user'])->where('numeroCompte', $compteId)->first();
 
         if (!$compte) {
             return response()->json([
                 'success' => false,
                 'error' => [
                     'code' => 'COMPTE_NOT_FOUND',
-                    'message' => 'Le compte avec l\'ID spécifié n\'existe pas',
+                    'message' => 'Le compte avec le numéro spécifié n\'existe pas',
                     'details' => [
-                        'compteId' => $compteId
+                        'numeroCompte' => $compteId
                     ]
                 ]
             ], 404);
@@ -496,7 +482,7 @@ class CompteController extends Controller
      *     @OA\Parameter(
      *         name="compteId",
      *         in="path",
-     *         description="ID du compte à mettre à jour",
+     *         description="ID UUID ou numéro de compte à mettre à jour",
      *         required=true,
      *         @OA\Schema(type="string", format="uuid")
      *     ),
@@ -582,22 +568,8 @@ class CompteController extends Controller
      */
     public function update(UpdateCompteRequest $request, string $compteId): JsonResponse
     {
-        // Validation de l'UUID
-        if (!\Illuminate\Support\Str::isUuid($compteId)) {
-            return response()->json([
-                'success' => false,
-                'error' => [
-                    'code' => 'INVALID_UUID',
-                    'message' => 'L\'ID du compte doit être un UUID valide',
-                    'details' => [
-                        'compteId' => $compteId
-                    ]
-                ]
-            ], 400);
-        }
-
-        // Recherche du compte
-        $compte = Compte::find($compteId);
+        // Recherche du compte par numéro de compte uniquement
+        $compte = Compte::where('numeroCompte', $compteId)->first();
 
         if (!$compte) {
             return response()->json([
@@ -823,7 +795,7 @@ class CompteController extends Controller
      *     @OA\Parameter(
      *         name="compteId",
      *         in="path",
-     *         description="ID du compte à bloquer",
+     *         description="ID UUID ou numéro de compte à bloquer",
      *         required=true,
      *         @OA\Schema(type="string", format="uuid")
      *     ),
@@ -895,20 +867,6 @@ class CompteController extends Controller
      */
     public function block(Request $request, string $compteId): JsonResponse
     {
-        // Validation de l'UUID
-        if (!\Illuminate\Support\Str::isUuid($compteId)) {
-            return response()->json([
-                'success' => false,
-                'error' => [
-                    'code' => 'INVALID_UUID',
-                    'message' => 'L\'ID du compte doit être un UUID valide',
-                    'details' => [
-                        'compteId' => $compteId
-                    ]
-                ]
-            ], 400);
-        }
-
         // Validation des données d'entrée
         $request->validate([
             'motif' => 'required|string|max:255',
@@ -921,8 +879,23 @@ class CompteController extends Controller
             'dureeBlocage.max' => 'La durée maximale est de 365 jours.'
         ]);
 
-        // Recherche du compte
-        $compte = Compte::find($compteId);
+        // Recherche du compte par ID UUID ou numéro de compte
+        $compte = null;
+
+        // Essayer d'abord comme UUID
+        if (\Illuminate\Support\Str::isUuid($compteId)) {
+            $compte = Compte::find($compteId);
+        }
+
+        // Si pas trouvé et que ce n'est pas un UUID, essayer comme numéro de compte
+        if (!$compte && !\Illuminate\Support\Str::isUuid($compteId)) {
+            $compte = Compte::where('numeroCompte', $compteId)->first();
+        }
+
+        // Si toujours pas trouvé, essayer avec un UUID même si ce n'est pas un format valide
+        if (!$compte) {
+            $compte = Compte::find($compteId);
+        }
 
         if (!$compte) {
             return response()->json([
@@ -1012,7 +985,7 @@ class CompteController extends Controller
      *     @OA\Parameter(
      *         name="compteId",
      *         in="path",
-     *         description="ID du compte à débloquer",
+     *         description="ID UUID ou numéro de compte à débloquer",
      *         required=true,
      *         @OA\Schema(type="string", format="uuid")
      *     ),
@@ -1082,20 +1055,6 @@ class CompteController extends Controller
      */
     public function unblock(Request $request, string $compteId): JsonResponse
     {
-        // Validation de l'UUID
-        if (!\Illuminate\Support\Str::isUuid($compteId)) {
-            return response()->json([
-                'success' => false,
-                'error' => [
-                    'code' => 'INVALID_UUID',
-                    'message' => 'L\'ID du compte doit être un UUID valide',
-                    'details' => [
-                        'compteId' => $compteId
-                    ]
-                ]
-            ], 400);
-        }
-
         // Validation des données d'entrée
         $request->validate([
             'motif' => 'required|string|max:255'
@@ -1104,8 +1063,8 @@ class CompteController extends Controller
             'motif.max' => 'Le motif ne peut pas dépasser 255 caractères.'
         ]);
 
-        // Recherche du compte
-        $compte = Compte::find($compteId);
+        // Recherche du compte par numéro de compte uniquement
+        $compte = Compte::where('numeroCompte', $compteId)->first();
 
         if (!$compte) {
             return response()->json([
@@ -1188,7 +1147,7 @@ class CompteController extends Controller
      *     @OA\Parameter(
      *         name="compteId",
      *         in="path",
-     *         description="ID du compte à archiver",
+     *         description="ID UUID ou numéro de compte à archiver",
      *         required=true,
      *         @OA\Schema(type="string", format="uuid")
      *     ),
@@ -1261,20 +1220,6 @@ class CompteController extends Controller
      */
     public function archive(Request $request, string $compteId): JsonResponse
     {
-        // Validation de l'UUID
-        if (!\Illuminate\Support\Str::isUuid($compteId)) {
-            return response()->json([
-                'success' => false,
-                'error' => [
-                    'code' => 'INVALID_UUID',
-                    'message' => 'L\'ID du compte doit être un UUID valide',
-                    'details' => [
-                        'compteId' => $compteId
-                    ]
-                ]
-            ], 400);
-        }
-
         // Validation des données d'entrée
         $request->validate([
             'motif' => 'required|string|max:255',
@@ -1287,8 +1232,23 @@ class CompteController extends Controller
             'dureeArchivage.max' => 'La durée maximale d\'archivage est de 7 ans (2555 jours).'
         ]);
 
-        // Recherche du compte
-        $compte = Compte::find($compteId);
+        // Recherche du compte par ID UUID ou numéro de compte
+        $compte = null;
+
+        // Essayer d'abord comme UUID
+        if (\Illuminate\Support\Str::isUuid($compteId)) {
+            $compte = Compte::find($compteId);
+        }
+
+        // Si pas trouvé et que ce n'est pas un UUID, essayer comme numéro de compte
+        if (!$compte && !\Illuminate\Support\Str::isUuid($compteId)) {
+            $compte = Compte::where('numeroCompte', $compteId)->first();
+        }
+
+        // Si toujours pas trouvé, essayer avec un UUID même si ce n'est pas un format valide
+        if (!$compte) {
+            $compte = Compte::find($compteId);
+        }
 
         if (!$compte) {
             return response()->json([
@@ -1376,7 +1336,7 @@ class CompteController extends Controller
      *     @OA\Parameter(
      *         name="compteId",
      *         in="path",
-     *         description="ID du compte à désarchiver",
+     *         description="ID UUID ou numéro de compte à désarchiver",
      *         required=true,
      *         @OA\Schema(type="string", format="uuid")
      *     ),
@@ -1433,20 +1393,6 @@ class CompteController extends Controller
      */
     public function unarchive(Request $request, string $compteId): JsonResponse
     {
-        // Validation de l'UUID
-        if (!\Illuminate\Support\Str::isUuid($compteId)) {
-            return response()->json([
-                'success' => false,
-                'error' => [
-                    'code' => 'INVALID_UUID',
-                    'message' => 'L\'ID du compte doit être un UUID valide',
-                    'details' => [
-                        'compteId' => $compteId
-                    ]
-                ]
-            ], 400);
-        }
-
         // Validation des données d'entrée
         $request->validate([
             'motif' => 'required|string|max:255'
@@ -1455,8 +1401,23 @@ class CompteController extends Controller
             'motif.max' => 'Le motif ne peut pas dépasser 255 caractères.'
         ]);
 
-        // Recherche du compte
-        $compte = Compte::find($compteId);
+        // Recherche du compte par ID UUID ou numéro de compte
+        $compte = null;
+
+        // Essayer d'abord comme UUID
+        if (\Illuminate\Support\Str::isUuid($compteId)) {
+            $compte = Compte::find($compteId);
+        }
+
+        // Si pas trouvé et que ce n'est pas un UUID, essayer comme numéro de compte
+        if (!$compte && !\Illuminate\Support\Str::isUuid($compteId)) {
+            $compte = Compte::where('numeroCompte', $compteId)->first();
+        }
+
+        // Si toujours pas trouvé, essayer avec un UUID même si ce n'est pas un format valide
+        if (!$compte) {
+            $compte = Compte::find($compteId);
+        }
 
         if (!$compte) {
             return response()->json([
@@ -1523,7 +1484,7 @@ class CompteController extends Controller
      *     @OA\Parameter(
      *         name="compteId",
      *         in="path",
-     *         description="ID du compte à supprimer",
+     *         description="ID UUID ou numéro de compte à supprimer",
      *         required=true,
      *         @OA\Schema(type="string", format="uuid")
      *     ),
@@ -1599,22 +1560,23 @@ class CompteController extends Controller
      */
     public function destroy(string $compteId): JsonResponse
     {
-        // Validation de l'UUID
-        if (!\Illuminate\Support\Str::isUuid($compteId)) {
-            return response()->json([
-                'success' => false,
-                'error' => [
-                    'code' => 'INVALID_UUID',
-                    'message' => 'L\'ID du compte doit être un UUID valide',
-                    'details' => [
-                        'compteId' => $compteId
-                    ]
-                ]
-            ], 400);
+        // Recherche du compte par ID UUID ou numéro de compte
+        $compte = null;
+
+        // Essayer d'abord comme UUID
+        if (\Illuminate\Support\Str::isUuid($compteId)) {
+            $compte = Compte::with(['client.user', 'transactions'])->find($compteId);
         }
 
-        // Recherche du compte avec relations
-        $compte = Compte::with(['client.user', 'transactions'])->find($compteId);
+        // Si pas trouvé et que ce n'est pas un UUID, essayer comme numéro de compte
+        if (!$compte && !\Illuminate\Support\Str::isUuid($compteId)) {
+            $compte = Compte::with(['client.user', 'transactions'])->where('numeroCompte', $compteId)->first();
+        }
+
+        // Si toujours pas trouvé, essayer avec un UUID même si ce n'est pas un format valide
+        if (!$compte) {
+            $compte = Compte::with(['client.user', 'transactions'])->find($compteId);
+        }
 
         if (!$compte) {
             return response()->json([
