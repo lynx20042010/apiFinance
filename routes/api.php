@@ -18,6 +18,10 @@ use Illuminate\Support\Facades\Route;
 // Routes publiques (pas d'authentification requise pour le moment)
 Route::prefix('v1')->group(function () {
     Route::apiResource('comptes', CompteController::class);
+
+    // Routes supplémentaires pour les opérations spéciales
+    Route::post('comptes/{compte}/block', [CompteController::class, 'block']);
+    Route::post('comptes/{compte}/unblock', [CompteController::class, 'unblock']);
 });
 
 // Route utilisateur authentifié
