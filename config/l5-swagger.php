@@ -14,7 +14,7 @@ return [
                 /*
                  * Route for accessing api documentation interface
                  */
-                'api' => 'docs',
+                'api' => 'ndeyendiaye/documentation',
             ],
             'paths' => [
                 /*
