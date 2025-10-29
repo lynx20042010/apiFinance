@@ -1,5 +1,5 @@
 # Utiliser l'image PHP officielle avec Apache
-FROM php:8.2-apache
+FROM php:8.3-apache
 
 # Installer les dépendances système
 RUN apt-get update && apt-get install -y \
@@ -31,8 +31,8 @@ WORKDIR /var/www/html
 # Copier les fichiers de l'application
 COPY . .
 
-# Installer les dépendances PHP (sans interaction)
-RUN composer install --no-interaction --optimize-autoloader --no-dev
+# Installer les dépendances PHP (avec dev dependencies pour développement)
+RUN composer install --no-interaction --optimize-autoloader
 
 # Définir les permissions
 RUN chown -R www-data:www-data /var/www/html \
