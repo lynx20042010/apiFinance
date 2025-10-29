@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:80"
+    environment:
+      - APP_NAME=apiFinance
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - APP_URL=http://localhost:8000
+      - DB_CONNECTION=pgsql
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_DATABASE=api_finance
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=password
+      - LOG_CHANNEL=stack
+      - CACHE_DRIVER=file
+      - QUEUE_CONNECTION=sync
+      - SESSION_DRIVER=file
+    depends_on:
+      - db
+    volumes:
+      - .:/var/www/html
+      - /var/www/html/vendor
+    networks:
+      - laravel
+
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=api_finance
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - laravel
+
+volumes:
+  postgres_data:
+
+networks:
+  laravel:
+    driver: bridge

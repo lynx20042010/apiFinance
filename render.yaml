@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: api-finance
+    runtime: docker
+    plan: starter
+    buildCommand: "docker build -t api-finance ."
+    startCommand: "docker run -p $PORT:80 api-finance"
+    envVars:
+      - key: APP_NAME
+        value: apiFinance
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_URL
+        fromSecret: app-url
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        fromSecret: db-host
+      - key: DB_PORT
+        fromSecret: db-port
+      - key: DB_DATABASE
+        fromSecret: db-name
+      - key: DB_USERNAME
+        fromSecret: db-username
+      - key: DB_PASSWORD
+        fromSecret: db-password
+      - key: LOG_CHANNEL
+        value: stack
+      - key: CACHE_DRIVER
+        value: file
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: SESSION_DRIVER
+        value: file
+      - key: MAIL_MAILER
+        value: log
+
+databases:
+  - name: api-finance-db
+    databaseName: apifinancedb
+    user: apifinancedb_user
+    plan: starter

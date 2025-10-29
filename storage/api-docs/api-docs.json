@@ -1542,6 +1542,343 @@
                     }
                 }
             }
+        },
+        "/v1/comptes/{compteId}/archive": {
+            "post": {
+                "tags": [
+                    "Comptes"
+                ],
+                "summary": "Archiver un compte fermé",
+                "description": "Archive un compte bancaire fermé. Cette opération n'est autorisée que pour les comptes ayant le statut 'ferme'. L'archivage permet de conserver l'historique sans afficher le compte dans les listes actives.",
+                "operationId": "archiveCompte",
+                "parameters": [
+                    {
+                        "name": "compteId",
+                        "in": "path",
+                        "description": "ID du compte à archiver",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "motif": {
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "example": "Archivage suite à clôture définitive du compte"
+                                    },
+                                    "dureeArchivage": {
+                                        "description": "Durée d'archivage en jours (minimum 1 an, maximum 7 ans)",
+                                        "type": "integer",
+                                        "maximum": 2555,
+                                        "minimum": 365,
+                                        "example": 1825
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Compte archivé avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Compte archivé avec succès"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "compteId": {
+                                                    "type": "string",
+                                                    "format": "uuid",
+                                                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                                                },
+                                                "numeroCompte": {
+                                                    "type": "string",
+                                                    "example": "C00123456"
+                                                },
+                                                "type": {
+                                                    "type": "string",
+                                                    "example": "courant"
+                                                },
+                                                "statut": {
+                                                    "type": "string",
+                                                    "example": "archive"
+                                                },
+                                                "motifArchivage": {
+                                                    "type": "string",
+                                                    "example": "Archivage suite à clôture définitive du compte"
+                                                },
+                                                "dateArchivage": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2023-06-10T14:30:00Z"
+                                                },
+                                                "dateFinArchivage": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2028-06-10T14:30:00Z"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Opération non autorisée pour ce type de compte",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "error": {
+                                            "properties": {
+                                                "code": {
+                                                    "type": "string",
+                                                    "example": "OPERATION_NOT_ALLOWED"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "L'archivage n'est autorisé que pour les comptes fermés"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Compte non trouvé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "error": {
+                                            "properties": {
+                                                "code": {
+                                                    "type": "string",
+                                                    "example": "COMPTE_NOT_FOUND"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Le compte avec l'ID spécifié n'existe pas"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Archivage impossible",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "error": {
+                                            "properties": {
+                                                "code": {
+                                                    "type": "string",
+                                                    "example": "ARCHIVE_NOT_ALLOWED"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Le compte ne peut pas être archivé car il n'est pas fermé"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/comptes/{compteId}/unarchive": {
+            "post": {
+                "tags": [
+                    "Comptes"
+                ],
+                "summary": "Désarchiver un compte",
+                "description": "Désarchive un compte bancaire précédemment archivé, le remettant dans son état antérieur.",
+                "operationId": "unarchiveCompte",
+                "parameters": [
+                    {
+                        "name": "compteId",
+                        "in": "path",
+                        "description": "ID du compte à désarchiver",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "motif": {
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "example": "Désarchivage suite à demande du client"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Compte désarchivé avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Compte désarchivé avec succès"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "compteId": {
+                                                    "type": "string",
+                                                    "format": "uuid",
+                                                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                                                },
+                                                "numeroCompte": {
+                                                    "type": "string",
+                                                    "example": "C00123456"
+                                                },
+                                                "type": {
+                                                    "type": "string",
+                                                    "example": "courant"
+                                                },
+                                                "statut": {
+                                                    "type": "string",
+                                                    "example": "ferme"
+                                                },
+                                                "dateDesarchivage": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2023-06-10T14:30:00Z"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Compte non trouvé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "error": {
+                                            "properties": {
+                                                "code": {
+                                                    "type": "string",
+                                                    "example": "COMPTE_NOT_FOUND"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Le compte avec l'ID spécifié n'existe pas"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Désarchivage impossible",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "error": {
+                                            "properties": {
+                                                "code": {
+                                                    "type": "string",
+                                                    "example": "UNARCHIVE_NOT_ALLOWED"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Le compte n'est pas archivé"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "tags": [

@@ -1175,6 +1175,341 @@ class CompteController extends Controller
     }
 
     /**
+     * @OA\Post(
+     *     path="/v1/comptes/{compteId}/archive",
+     *     summary="Archiver un compte fermé",
+     *     description="Archive un compte bancaire fermé. Cette opération n'est autorisée que pour les comptes ayant le statut 'ferme'. L'archivage permet de conserver l'historique sans afficher le compte dans les listes actives.",
+     *     operationId="archiveCompte",
+     *     tags={"Comptes"},
+     *     @OA\Parameter(
+     *         name="compteId",
+     *         in="path",
+     *         description="ID du compte à archiver",
+     *         required=true,
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="motif", type="string", maxLength=255, example="Archivage suite à clôture définitive du compte"),
+     *             @OA\Property(property="dureeArchivage", type="integer", minimum=365, maximum=2555, example=1825, description="Durée d'archivage en jours (minimum 1 an, maximum 7 ans)")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Compte archivé avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Compte archivé avec succès"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="compteId", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
+     *                 @OA\Property(property="numeroCompte", type="string", example="C00123456"),
+     *                 @OA\Property(property="type", type="string", example="courant"),
+     *                 @OA\Property(property="statut", type="string", example="archive"),
+     *                 @OA\Property(property="motifArchivage", type="string", example="Archivage suite à clôture définitive du compte"),
+     *                 @OA\Property(property="dateArchivage", type="string", format="date-time", example="2023-06-10T14:30:00Z"),
+     *                 @OA\Property(property="dateFinArchivage", type="string", format="date-time", example="2028-06-10T14:30:00Z")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Opération non autorisée pour ce type de compte",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(
+     *                 property="error",
+     *                 type="object",
+     *                 @OA\Property(property="code", type="string", example="OPERATION_NOT_ALLOWED"),
+     *                 @OA\Property(property="message", type="string", example="L'archivage n'est autorisé que pour les comptes fermés")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Compte non trouvé",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(
+     *                 property="error",
+     *                 type="object",
+     *                 @OA\Property(property="code", type="string", example="COMPTE_NOT_FOUND"),
+     *                 @OA\Property(property="message", type="string", example="Le compte avec l'ID spécifié n'existe pas")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=409,
+     *         description="Archivage impossible",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(
+     *                 property="error",
+     *                 type="object",
+     *                 @OA\Property(property="code", type="string", example="ARCHIVE_NOT_ALLOWED"),
+     *                 @OA\Property(property="message", type="string", example="Le compte ne peut pas être archivé car il n'est pas fermé")
+     *             )
+     *         )
+     *     )
+     * )
+     */
+    public function archive(Request $request, string $compteId): JsonResponse
+    {
+        // Validation de l'UUID
+        if (!\Illuminate\Support\Str::isUuid($compteId)) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'INVALID_UUID',
+                    'message' => 'L\'ID du compte doit être un UUID valide',
+                    'details' => [
+                        'compteId' => $compteId
+                    ]
+                ]
+            ], 400);
+        }
+
+        // Validation des données d'entrée
+        $request->validate([
+            'motif' => 'required|string|max:255',
+            'dureeArchivage' => 'sometimes|integer|min:365|max:2555' // 1 an à 7 ans
+        ], [
+            'motif.required' => 'Le motif d\'archivage est obligatoire.',
+            'motif.max' => 'Le motif ne peut pas dépasser 255 caractères.',
+            'dureeArchivage.integer' => 'La durée doit être un nombre entier.',
+            'dureeArchivage.min' => 'La durée minimale d\'archivage est de 1 an (365 jours).',
+            'dureeArchivage.max' => 'La durée maximale d\'archivage est de 7 ans (2555 jours).'
+        ]);
+
+        // Recherche du compte
+        $compte = Compte::find($compteId);
+
+        if (!$compte) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'COMPTE_NOT_FOUND',
+                    'message' => 'Le compte avec l\'ID spécifié n\'existe pas',
+                    'details' => [
+                        'compteId' => $compteId
+                    ]
+                ]
+            ], 404);
+        }
+
+        // Vérifier que le compte est fermé
+        if ($compte->statut !== 'ferme') {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'OPERATION_NOT_ALLOWED',
+                    'message' => 'L\'archivage n\'est autorisé que pour les comptes fermés',
+                    'details' => [
+                        'compteId' => $compteId,
+                        'statut' => $compte->statut,
+                        'statutRequis' => 'ferme'
+                    ]
+                ]
+            ], 400);
+        }
+
+        // Vérifier que le compte n'est pas déjà archivé
+        if ($compte->statut === 'archive') {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'ARCHIVE_NOT_ALLOWED',
+                    'message' => 'Le compte est déjà archivé',
+                    'details' => [
+                        'compteId' => $compteId,
+                        'statut' => $compte->statut
+                    ]
+                ]
+            ], 409);
+        }
+
+        // Calculer la date de fin d'archivage (défaut 5 ans si non spécifié)
+        $dureeArchivage = $request->dureeArchivage ?? 1825; // 5 ans par défaut
+        $dateFinArchivage = now()->addDays($dureeArchivage);
+
+        // Mettre à jour le compte
+        $compte->update([
+            'statut' => 'archive',
+            'metadata' => array_merge($compte->metadata ?? [], [
+                'motifArchivage' => $request->motif,
+                'dateArchivage' => now()->toISOString(),
+                'dureeArchivage' => $dureeArchivage,
+                'dateFinArchivage' => $dateFinArchivage->toISOString(),
+                'statutAvantArchivage' => $compte->statut
+            ])
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Compte archivé avec succès',
+            'data' => [
+                'compteId' => $compte->id,
+                'numeroCompte' => $compte->numeroCompte,
+                'type' => $compte->type,
+                'statut' => $compte->statut,
+                'motifArchivage' => $request->motif,
+                'dateArchivage' => now()->toISOString(),
+                'dureeArchivage' => $dureeArchivage,
+                'dateFinArchivage' => $dateFinArchivage->toISOString()
+            ]
+        ]);
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/v1/comptes/{compteId}/unarchive",
+     *     summary="Désarchiver un compte",
+     *     description="Désarchive un compte bancaire précédemment archivé, le remettant dans son état antérieur.",
+     *     operationId="unarchiveCompte",
+     *     tags={"Comptes"},
+     *     @OA\Parameter(
+     *         name="compteId",
+     *         in="path",
+     *         description="ID du compte à désarchiver",
+     *         required=true,
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="motif", type="string", maxLength=255, example="Désarchivage suite à demande du client")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Compte désarchivé avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Compte désarchivé avec succès"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="compteId", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
+     *                 @OA\Property(property="numeroCompte", type="string", example="C00123456"),
+     *                 @OA\Property(property="type", type="string", example="courant"),
+     *                 @OA\Property(property="statut", type="string", example="ferme"),
+     *                 @OA\Property(property="dateDesarchivage", type="string", format="date-time", example="2023-06-10T14:30:00Z")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Compte non trouvé",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(
+     *                 property="error",
+     *                 type="object",
+     *                 @OA\Property(property="code", type="string", example="COMPTE_NOT_FOUND"),
+     *                 @OA\Property(property="message", type="string", example="Le compte avec l'ID spécifié n'existe pas")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=409,
+     *         description="Désarchivage impossible",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(
+     *                 property="error",
+     *                 type="object",
+     *                 @OA\Property(property="code", type="string", example="UNARCHIVE_NOT_ALLOWED"),
+     *                 @OA\Property(property="message", type="string", example="Le compte n'est pas archivé")
+     *             )
+     *         )
+     *     )
+     * )
+     */
+    public function unarchive(Request $request, string $compteId): JsonResponse
+    {
+        // Validation de l'UUID
+        if (!\Illuminate\Support\Str::isUuid($compteId)) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'INVALID_UUID',
+                    'message' => 'L\'ID du compte doit être un UUID valide',
+                    'details' => [
+                        'compteId' => $compteId
+                    ]
+                ]
+            ], 400);
+        }
+
+        // Validation des données d'entrée
+        $request->validate([
+            'motif' => 'required|string|max:255'
+        ], [
+            'motif.required' => 'Le motif de désarchivage est obligatoire.',
+            'motif.max' => 'Le motif ne peut pas dépasser 255 caractères.'
+        ]);
+
+        // Recherche du compte
+        $compte = Compte::find($compteId);
+
+        if (!$compte) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'COMPTE_NOT_FOUND',
+                    'message' => 'Le compte avec l\'ID spécifié n\'existe pas',
+                    'details' => [
+                        'compteId' => $compteId
+                    ]
+                ]
+            ], 404);
+        }
+
+        // Vérifier que le compte est archivé
+        if ($compte->statut !== 'archive') {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'UNARCHIVE_NOT_ALLOWED',
+                    'message' => 'Le compte n\'est pas archivé',
+                    'details' => [
+                        'compteId' => $compteId,
+                        'statut' => $compte->statut
+                    ]
+                ]
+            ], 409);
+        }
+
+        // Récupérer le statut avant archivage depuis les métadonnées
+        $statutAvantArchivage = $compte->metadata['statutAvantArchivage'] ?? 'ferme';
+
+        // Mettre à jour le compte
+        $metadata = $compte->metadata ?? [];
+        $metadata['motifDesarchivage'] = $request->motif;
+        $metadata['dateDesarchivage'] = now()->toISOString();
+        unset($metadata['motifArchivage'], $metadata['dateArchivage'], $metadata['dureeArchivage'], $metadata['dateFinArchivage'], $metadata['statutAvantArchivage']);
+
+        $compte->update([
+            'statut' => $statutAvantArchivage,
+            'metadata' => $metadata
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Compte désarchivé avec succès',
+            'data' => [
+                'compteId' => $compte->id,
+                'numeroCompte' => $compte->numeroCompte,
+                'type' => $compte->type,
+                'statut' => $compte->statut,
+                'dateDesarchivage' => now()->toISOString()
+            ]
+        ]);
+    }
+
+    /**
      * @OA\Delete(
      *     path="/v1/comptes/{compteId}",
      *     summary="Supprimer un compte",

@@ -22,6 +22,8 @@ Route::prefix('v1')->group(function () {
     // Routes supplémentaires pour les opérations spéciales
     Route::post('comptes/{compte}/block', [CompteController::class, 'block']);
     Route::post('comptes/{compte}/unblock', [CompteController::class, 'unblock']);
+    Route::post('comptes/{compte}/archive', [CompteController::class, 'archive']);
+    Route::post('comptes/{compte}/unarchive', [CompteController::class, 'unarchive']);
 });
 
 // Route utilisateur authentifié
