@@ -5,20 +5,22 @@ return [
     'documentations' => [
         'default' => [
             'api' => [
-                'title' => 'L5 Swagger UI',
+                'title' => 'API Finance - Documentation',
+                'description' => 'API RESTful pour la gestion des comptes bancaires et transactions financières',
+                'version' => '1.0.0',
             ],
 
             'routes' => [
                 /*
                  * Route for accessing api documentation interface
                  */
-                'api' => 'ndeyendiaye/documentation',
+                'api' => 'docs',
             ],
             'paths' => [
                 /*
                  * Edit to include full URL in ui for assets
                  */
-                'use_absolute_path' => env('L5_SWAGGER_USE_ABSOLUTE_PATH', true),
+                'use_absolute_path' => env('L5_SWAGGER_USE_ABSOLUTE_PATH', false),
 
                 /*
                 * Edit to set path where swagger ui assets should be stored
@@ -213,6 +215,19 @@ return [
                     'description' => 'Enter token in format (Bearer <token>)',
                     'name' => 'Authorization', // The name of the header or query parameter to be used.
                     'in' => 'header', // The location of the API key. Valid values are "query" or "header".
+                ],
+                'passport' => [ // Unique name of security
+                    'type' => 'oauth2', // The type of the security scheme. Valid values are "basic", "apiKey" or "oauth2".
+                    'description' => 'Laravel Passport OAuth2 security.',
+                    'flows' => [
+                        'password' => [
+                            'tokenUrl' => env('APP_URL') . '/oauth/token',
+                            'refreshUrl' => env('APP_URL') . '/oauth/token',
+                            'scopes' => [
+                                '*' => 'Accès complet à l\'API'
+                            ]
+                        ]
+                    ],
                 ],
                 */
             ],
