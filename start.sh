@@ -11,6 +11,12 @@ if [ ! -f .env ]; then
     cp .env.example .env
 fi
 
+# Générer la clé d'application si elle n'existe pas
+if [ -z "$APP_KEY" ] || [ "$APP_KEY" = "base64:" ]; then
+    echo "🔑 Génération de la clé d'application..."
+    php artisan key:generate --force
+fi
+
 # Attendre que la base de données soit prête
 echo "⏳ Attente de la base de données..."
 max_attempts=30

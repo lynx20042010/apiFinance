@@ -34,6 +34,9 @@ COPY . .
 # Installer les dépendances PHP (avec dev dependencies pour développement)
 RUN composer install --no-interaction --optimize-autoloader
 
+# Créer le fichier .env s'il n'existe pas
+RUN if [ ! -f .env ]; then cp .env.example .env; fi
+
 # Définir les permissions
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage \
