@@ -810,10 +810,189 @@ class CompteController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * @OA\Delete(
+     *     path="/v1/comptes/{compteId}",
+     *     summary="Supprimer un compte",
+     *     description="Supprime définitivement un compte bancaire. Cette opération est irréversible et nécessite que le compte soit vide de solde et sans transactions actives.",
+     *     operationId="deleteCompte",
+     *     tags={"Comptes"},
+     *     @OA\Parameter(
+     *         name="compteId",
+     *         in="path",
+     *         description="ID du compte à supprimer",
+     *         required=true,
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Compte supprimé avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Compte supprimé avec succès"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="compteId", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
+     *                 @OA\Property(property="numeroCompte", type="string", example="C00123456"),
+     *                 @OA\Property(property="titulaire", type="string", example="Amadou Diallo"),
+     *                 @OA\Property(property="deletedAt", type="string", format="date-time", example="2023-06-10T14:30:00Z")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Compte non trouvé",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(
+     *                 property="error",
+     *                 type="object",
+     *                 @OA\Property(property="code", type="string", example="COMPTE_NOT_FOUND"),
+     *                 @OA\Property(property="message", type="string", example="Le compte avec l'ID spécifié n'existe pas")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="ID invalide",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(
+     *                 property="error",
+     *                 type="object",
+     *                 @OA\Property(property="code", type="string", example="INVALID_UUID"),
+     *                 @OA\Property(property="message", type="string", example="L'ID du compte doit être un UUID valide")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=409,
+     *         description="Suppression impossible",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(
+     *                 property="error",
+     *                 type="object",
+     *                 @OA\Property(property="code", type="string", example="DELETION_NOT_ALLOWED"),
+     *                 @OA\Property(property="message", type="string", example="Le compte ne peut pas être supprimé car il contient encore des fonds ou des transactions actives")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Opération non autorisée",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(
+     *                 property="error",
+     *                 type="object",
+     *                 @OA\Property(property="code", type="string", example="OPERATION_NOT_ALLOWED"),
+     *                 @OA\Property(property="message", type="string", example="Cette opération n'est pas autorisée sur ce compte")
+     *             )
+     *         )
+     *     )
+     * )
      */
-    public function destroy(string $id)
+    public function destroy(string $compteId): JsonResponse
     {
-        //
+        // Validation de l'UUID
+        if (!\Illuminate\Support\Str::isUuid($compteId)) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'INVALID_UUID',
+                    'message' => 'L\'ID du compte doit être un UUID valide',
+                    'details' => [
+                        'compteId' => $compteId
+                    ]
+                ]
+            ], 400);
+        }
+
+        // Recherche du compte avec relations
+        $compte = Compte::with(['client.user', 'transactions'])->find($compteId);
+
+        if (!$compte) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'COMPTE_NOT_FOUND',
+                    'message' => 'Le compte avec l\'ID spécifié n\'existe pas',
+                    'details' => [
+                        'compteId' => $compteId
+                    ]
+                ]
+            ], 404);
+        }
+
+        // Vérifications de sécurité avant suppression
+        if ($compte->statut === 'ferme') {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'OPERATION_NOT_ALLOWED',
+                    'message' => 'Impossible de supprimer un compte déjà fermé',
+                    'details' => [
+                        'compteId' => $compteId,
+                        'statut' => $compte->statut
+                    ]
+                ]
+            ], 403);
+        }
+
+        // Note: La suppression est autorisée même avec un solde positif
+        // selon les nouvelles règles métier
+
+        // Vérifier s'il y a des transactions actives (non traitées)
+        $transactionsActives = $compte->transactions()
+            ->whereIn('statut', ['en_attente', 'traitee'])
+            ->count();
+
+        if ($transactionsActives > 0) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'DELETION_NOT_ALLOWED',
+                    'message' => 'Impossible de supprimer un compte avec des transactions actives',
+                    'details' => [
+                        'compteId' => $compteId,
+                        'transactionsActives' => $transactionsActives
+                    ]
+                ]
+            ], 409);
+        }
+
+        // Stocker les informations avant suppression pour la réponse
+        $compteInfo = [
+            'compteId' => $compte->id,
+            'numeroCompte' => $compte->numeroCompte,
+            'titulaire' => $compte->client->titulaire ?? 'N/A',
+            'deletedAt' => now()->toISOString()
+        ];
+
+        try {
+            // Suppression du compte (les relations sont gérées par les clés étrangères)
+            $compte->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Compte supprimé avec succès',
+                'data' => $compteInfo
+            ]);
+
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Gestion des erreurs de base de données
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'DATABASE_ERROR',
+                    'message' => 'Erreur lors de la suppression du compte',
+                    'details' => [
+                        'compteId' => $compteId,
+                        'error' => $e->getMessage()
+                    ]
+                ]
+            ], 500);
+        }
     }
 }

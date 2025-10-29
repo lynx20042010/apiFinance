@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Route;
 
 // Routes publiques (pas d'authentification requise pour le moment)
 Route::prefix('v1')->group(function () {
-    Route::apiResource('comptes', CompteController::class)->only(['index', 'show', 'store', 'update']);
+    Route::apiResource('comptes', CompteController::class);
 });
 
 // Route utilisateur authentifié
