@@ -17,7 +17,11 @@ use Illuminate\Support\Facades\Hash;
  * @OA\Info(
  *     title="API Finance - Gestion des Comptes",
  *     version="1.0.0",
- *     description="API RESTful pour la gestion des comptes bancaires"
+ *     description="API RESTful pour la gestion des comptes bancaires et transactions financières"
+ * )
+ * @OA\Server(
+ *     url="https://apifinance.onrender.com/api",
+ *     description="Serveur de production"
  * )
  * @OA\Server(
  *     url="http://localhost:8000/api",
