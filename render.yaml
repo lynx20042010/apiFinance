@@ -3,8 +3,6 @@ services:
     name: api-finance
     runtime: docker
     plan: starter
-    buildCommand: "docker build -t api-finance ."
-    startCommand: "docker run -p $PORT:80 api-finance"
     envVars:
       - key: APP_NAME
         value: apiFinance
@@ -14,18 +12,32 @@ services:
         value: false
       - key: APP_URL
         fromSecret: app-url
+
+      # --- DATABASE CONFIGURATION ---
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_HOST
-        fromSecret: db-host
+        fromDatabase:
+          name: api-finance-db
+          property: host
       - key: DB_PORT
-        fromSecret: db-port
+        fromDatabase:
+          name: api-finance-db
+          property: port
       - key: DB_DATABASE
-        fromSecret: db-name
+        fromDatabase:
+          name: api-finance-db
+          property: database
       - key: DB_USERNAME
-        fromSecret: db-username
+        fromDatabase:
+          name: api-finance-db
+          property: user
       - key: DB_PASSWORD
-        fromSecret: db-password
+        fromDatabase:
+          name: api-finance-db
+          property: password
+
+      # --- LARAVEL SETTINGS ---
       - key: LOG_CHANNEL
         value: stack
       - key: CACHE_DRIVER
@@ -34,8 +46,14 @@ services:
         value: sync
       - key: SESSION_DRIVER
         value: file
+
+      # --- MAIL ---
       - key: MAIL_MAILER
         value: log
+
+      # --- CUSTOM SETTINGS ---
+      - key: RUN_MIGRATIONS
+        value: true
 
 databases:
   - name: api-finance-db

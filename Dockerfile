@@ -29,62 +29,57 @@ RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 WORKDIR /var/www/html
 
 # Copier les fichiers de l'application
-COPY . /var/www/html
+COPY . .
 
-# Installer les dépendances PHP
-RUN composer install --optimize-autoloader --no-dev
+# Installer les dépendances PHP (sans interaction)
+RUN composer install --no-interaction --optimize-autoloader --no-dev
 
 # Définir les permissions
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage \
     && chmod -R 755 /var/www/html/bootstrap/cache
 
-# Copier la configuration Apache personnalisée
-COPY <<EOF /etc/apache2/sites-available/000-default.conf
-<VirtualHost *:80>
-    ServerAdmin webmaster@localhost
-    DocumentRoot /var/www/html/public
-
-    <Directory /var/www/html/public>
-        AllowOverride All
-        Require all granted
-    </Directory>
-
-    ErrorLog \${APACHE_LOG_DIR}/error.log
-    CustomLog \${APACHE_LOG_DIR}/access.log combined
-</VirtualHost>
-EOF
+# Configuration Apache personnalisée
+RUN printf "<VirtualHost *:80>\n\
+    ServerAdmin webmaster@localhost\n\
+    DocumentRoot /var/www/html/public\n\
+    <Directory /var/www/html/public>\n\
+        AllowOverride All\n\
+        Require all granted\n\
+    </Directory>\n\
+    ErrorLog \${APACHE_LOG_DIR}/error.log\n\
+    CustomLog \${APACHE_LOG_DIR}/access.log combined\n\
+</VirtualHost>\n" > /etc/apache2/sites-available/000-default.conf
 
 # Créer le script de démarrage
-RUN echo '#!/bin/bash\n\
-# Attendre que la base de données soit prête\n\
+RUN printf '#!/bin/bash\n\
+set -e\n\
 echo "Waiting for database..."\n\
-while ! pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USERNAME; do\n\
+while ! pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USERNAME" >/dev/null 2>&1; do\n\
     sleep 1\n\
 done\n\
 echo "Database is ready!"\n\
 \n\
-# Générer la clé d'\''application si elle n'\''existe pas\n\
 if [ -z "$APP_KEY" ] || [ "$APP_KEY" = "base64:" ]; then\n\
     echo "Generating application key..."\n\
-    php artisan key:generate\n\
+    php artisan key:generate --force\n\
 fi\n\
 \n\
-# Exécuter les migrations\n\
-echo "Running migrations..."\n\
-php artisan migrate --force\n\
+if [ "$RUN_MIGRATIONS" = "true" ]; then\n\
+    echo "Running migrations..."\n\
+    php artisan migrate --force || true\n\
+fi\n\
 \n\
-# Générer la documentation Swagger\n\
-echo "Generating Swagger documentation..."\n\
-php artisan l5-swagger:generate\n\
+if [ -f artisan ]; then\n\
+    echo "Generating Swagger documentation..."\n\
+    php artisan l5-swagger:generate || true\n\
+fi\n\
 \n\
-# Démarrer Apache\n\
 echo "Starting Apache..."\n\
-apache2-foreground' > /usr/local/bin/start.sh
+exec apache2-foreground\n' > /usr/local/bin/start.sh
 
 RUN chmod +x /usr/local/bin/start.sh
 
-# Exposer le port 80
 EXPOSE 80
 
 # Commande de démarrage
