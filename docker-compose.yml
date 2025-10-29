@@ -15,13 +15,14 @@ services:
       - DB_CONNECTION=pgsql
       - DB_HOST=db
       - DB_PORT=5432
-      - DB_DATABASE=api_finance
-      - DB_USERNAME=postgres
+      - DB_DATABASE=laravel
+      - DB_USERNAME=laravel
       - DB_PASSWORD=password
       - LOG_CHANNEL=stack
       - CACHE_DRIVER=file
       - QUEUE_CONNECTION=sync
       - SESSION_DRIVER=file
+      - RUN_MIGRATIONS=true
     depends_on:
       - db
     volumes:
@@ -33,8 +34,8 @@ services:
   db:
     image: postgres:15
     environment:
-      - POSTGRES_DB=api_finance
-      - POSTGRES_USER=postgres
+      - POSTGRES_DB=laravel
+      - POSTGRES_USER=laravel
       - POSTGRES_PASSWORD=password
     ports:
       - "5432:5432"

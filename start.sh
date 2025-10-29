@@ -5,13 +5,19 @@ set -e
 
 echo "🚀 Démarrage de l'application apiFinance..."
 
+# Créer le fichier .env s'il n'existe pas
+if [ ! -f .env ]; then
+    echo "📄 Création du fichier .env..."
+    cp .env.example .env
+fi
+
 # Attendre que la base de données soit prête
 echo "⏳ Attente de la base de données..."
 max_attempts=30
 attempt=1
 
 while [ $attempt -le $max_attempts ]; do
-    if pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USERNAME 2>/dev/null; then
+    if pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USERNAME" >/dev/null 2>&1; then
         echo "✅ Base de données prête !"
         break
     fi
