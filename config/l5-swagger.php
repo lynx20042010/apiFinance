@@ -25,7 +25,7 @@ return [
                 /*
                 * Edit to set path where swagger ui assets should be stored
                 */
-                'swagger_ui_assets_path' => env('L5_SWAGGER_UI_ASSETS_PATH', 'vendor/swagger-api/swagger-ui/dist/'),
+                'swagger_ui_assets_path' => env('L5_SWAGGER_UI_ASSETS_PATH', 'https://unpkg.com/swagger-ui-dist@5.10.3/'),
 
                 /*
                  * File name of the generated json documentation file
@@ -71,6 +71,13 @@ return [
                 'asset' => [],
                 'docs' => [],
                 'oauth2_callback' => [],
+            ],
+
+            /*
+             * Route Group options for production
+             */
+            'group_options' => [
+                'middleware' => ['web'],
             ],
 
             /*
@@ -216,18 +223,11 @@ return [
                     'name' => 'Authorization', // The name of the header or query parameter to be used.
                     'in' => 'header', // The location of the API key. Valid values are "query" or "header".
                 ],
-                'passport' => [ // Unique name of security
-                    'type' => 'oauth2', // The type of the security scheme. Valid values are "basic", "apiKey" or "oauth2".
-                    'description' => 'Laravel Passport OAuth2 security.',
-                    'flows' => [
-                        'password' => [
-                            'tokenUrl' => env('APP_URL') . '/oauth/token',
-                            'refreshUrl' => env('APP_URL') . '/oauth/token',
-                            'scopes' => [
-                                '*' => 'Accès complet à l\'API'
-                            ]
-                        ]
-                    ],
+                'bearerAuth' => [
+                    'type' => 'http',
+                    'scheme' => 'bearer',
+                    'bearerFormat' => 'JWT',
+                    'description' => 'Enter your Bearer token in the format: Bearer {token}'
                 ],
                 */
             ],
@@ -236,14 +236,7 @@ return [
                  * Examples of Securities
                  */
                 [
-                    /*
-                    'oauth2_security_example' => [
-                        'read',
-                        'write'
-                    ],
-
-                    'passport' => []
-                    */
+                    'bearerAuth' => []
                 ],
             ],
         ],
