@@ -10,6 +10,8 @@ class Admin extends Model
 {
     use HasFactory;
 
+    protected $connection = 'render';
+
     protected $fillable = [
         'user_id',
         'role',
