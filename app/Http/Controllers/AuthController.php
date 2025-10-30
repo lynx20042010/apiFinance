@@ -98,7 +98,7 @@ class AuthController extends Controller
                         'id' => $user->id,
                         'name' => $user->name,
                         'email' => $user->email,
-                        'role' => $user->admin ? 'admin' : 'client'
+                        'role' => $user->getRole()
                     ],
                     'access_token' => $token,
                     'token_type' => 'Bearer',
@@ -432,7 +432,7 @@ class AuthController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
-                    'role' => $user->admin ? 'admin' : 'client'
+                    'role' => $user->getRole()
                 ]
             ]
         ]);
