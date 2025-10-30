@@ -12,17 +12,22 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('transactions', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('compte_id')->constrained()->onDelete('cascade');
-            $table->enum('type', ['depot', 'retrait', 'virement', 'transfert', 'commission', 'interet']);
+            $table->string('id')->primary();
+            $table->string('compte_id');
+            $table->enum('type', ['depot', 'retrait', 'virement', 'transfert', 'interet', 'commission']);
             $table->decimal('montant', 15, 2);
-            $table->string('devise', 3)->default('XAF');
+            $table->string('devise', 3)->default('XOF');
             $table->text('description')->nullable();
-            $table->foreignUuid('compte_destination_id')->nullable()->constrained('comptes')->onDelete('set null');
+            $table->string('compte_destination_id')->nullable();
             $table->enum('statut', ['en_attente', 'traitee', 'annulee', 'echouee'])->default('en_attente');
             $table->timestamp('date_execution')->nullable();
             $table->json('metadata')->nullable();
             $table->timestamps();
+
+            $table->foreign('compte_id')->references('id')->on('comptes')->onDelete('cascade');
+            $table->foreign('compte_destination_id')->references('id')->on('comptes')->onDelete('set null');
+            $table->index(['compte_id', 'statut', 'date_execution']);
+            $table->index(['type', 'statut']);
         });
     }
 

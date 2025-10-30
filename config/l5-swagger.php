@@ -5,27 +5,34 @@ return [
     'documentations' => [
         'default' => [
             'api' => [
-                'title' => 'API Finance - Documentation',
-                'description' => 'API RESTful pour la gestion des comptes bancaires et transactions financières',
+                'title' => 'API Finance - Gestion des Comptes Bancaires',
+                'description' => 'API RESTful complète pour la gestion des comptes bancaires, clients et transactions financières avec authentification OAuth2',
                 'version' => '1.0.0',
+                'contact' => [
+                    'email' => 'admin@apifinance.com'
+                ],
+                'license' => [
+                    'name' => 'MIT',
+                    'url' => 'https://opensource.org/licenses/MIT'
+                ]
             ],
 
             'routes' => [
                 /*
                  * Route for accessing api documentation interface
                  */
-                'api' => 'ndeyendiaye/documentation',
+                'api' => 'api/documentation',
             ],
             'paths' => [
                 /*
                  * Edit to include full URL in ui for assets
                  */
-                'use_absolute_path' => env('L5_SWAGGER_USE_ABSOLUTE_PATH', false),
+                'use_absolute_path' => env('L5_SWAGGER_USE_ABSOLUTE_PATH', true),
 
                 /*
                 * Edit to set path where swagger ui assets should be stored
                 */
-                'swagger_ui_assets_path' => env('L5_SWAGGER_UI_ASSETS_PATH', 'https://unpkg.com/swagger-ui-dist@5.10.3/'),
+                'swagger_ui_assets_path' => env('L5_SWAGGER_UI_ASSETS_PATH', 'vendor/swagger-api/swagger-ui/dist/'),
 
                 /*
                  * File name of the generated json documentation file
@@ -71,13 +78,6 @@ return [
                 'asset' => [],
                 'docs' => [],
                 'oauth2_callback' => [],
-            ],
-
-            /*
-             * Route Group options for production
-             */
-            'group_options' => [
-                'middleware' => ['web'],
             ],
 
             /*
@@ -219,15 +219,9 @@ return [
                 ],
                 'sanctum' => [ // Unique name of security
                     'type' => 'apiKey', // Valid values are "basic", "apiKey" or "oauth2".
-                    'description' => 'Enter token in format (Bearer <token>)',
+                    'description' => 'Token d\'accès Bearer obtenu via /api/v1/auth/login',
                     'name' => 'Authorization', // The name of the header or query parameter to be used.
                     'in' => 'header', // The location of the API key. Valid values are "query" or "header".
-                ],
-                'bearerAuth' => [
-                    'type' => 'http',
-                    'scheme' => 'bearer',
-                    'bearerFormat' => 'JWT',
-                    'description' => 'Enter your Bearer token in the format: Bearer {token}'
                 ],
                 */
             ],
@@ -236,7 +230,7 @@ return [
                  * Examples of Securities
                  */
                 [
-                    'bearerAuth' => []
+                    'sanctum' => []
                 ],
             ],
         ],

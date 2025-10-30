@@ -5,63 +5,74 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: api-finance-app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: api-finance-nginx
+    restart: unless-stopped
     ports:
       - "8000:80"
-    environment:
-      - APP_NAME=apiFinance
-      - APP_ENV=local
-      - APP_DEBUG=true
-      - APP_URL=http://localhost:8000
-      - DB_CONNECTION=render
-      # Configuration Render (base principale)
-      - RENDER_DATABASE_URL=postgresql://apifinacedb_user:vqZVTXI4pkrE6Txg4Ell6McKz7qJncj9@dpg-d40bs9jipnbc73cirh4g-a/apifinacedb
-      - DB_HOST=dpg-d40bs9jipnbc73cirh4g-a
-      - DB_PORT=5432
-      - DB_DATABASE=apifinancedb
-      - DB_USERNAME=apifinacedb_user
-      - DB_PASSWORD=vqZVTXI4pkrE6Txg4Ell6McKz7qJncj9
-      # Configuration Neon (pour comptes bloqués)
-      - NEON_DATABASE_URL=postgresql://neondb_owner:npg_2iAkDpuRlF8f@ep-sweet-pond-ahr7xobd-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
-      - NEON_DB_HOST=ep-sweet-pond-ahr7xobd-pooler.c-3.us-east-1.aws.neon.tech
-      - NEON_DB_PORT=5432
-      - NEON_DB_DATABASE=neondb
-      - NEON_DB_USERNAME=neondb_owner
-      - NEON_DB_PASSWORD=npg_2iAkDpuRlF8f
-      - LOG_CHANNEL=stack
-      - CACHE_DRIVER=file
-      - QUEUE_CONNECTION=sync
-      - SESSION_DRIVER=file
-      - RUN_MIGRATIONS=true
-    depends_on:
-      db:
-        condition: service_healthy
     volumes:
-      - .:/var/www/html
-      - /var/www/html/vendor
+      - ./:/var/www
+      - ./docker/nginx/conf.d/:/etc/nginx/conf.d/
     networks:
-      - laravel
+      - app-network
+    depends_on:
+      - app
 
   db:
-    image: postgres:15
+    image: postgres:15-alpine
+    container_name: api-finance-db
+    restart: unless-stopped
     environment:
-      - POSTGRES_DB=apifinancedb
-      - POSTGRES_USER=apifinancedb_user
-      - POSTGRES_PASSWORD=vqZVTXI4pkrE6Txg4Ell6McKz7qJncj9
+      POSTGRES_DB: ${DB_DATABASE:-api_finance}
+      POSTGRES_USER: ${DB_USERNAME:-api_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-api_password}
+    volumes:
+      - db-data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U apifinancedb_user -d apifinancedb"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     networks:
-      - laravel
+      - app-network
+
+  redis:
+    image: redis:alpine
+    container_name: api-finance-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+
+  queue-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-finance-queue
+    restart: unless-stopped
+    working_dir: /var/www
+    command: php artisan queue:work --sleep=3 --tries=3 --max-jobs=1000
+    volumes:
+      - ./:/var/www
+    networks:
+      - app-network
+    depends_on:
+      - app
+      - db
+      - redis
 
 volumes:
-  postgres_data:
+  db-data:
+    driver: local
 
 networks:
-  laravel:
+  app-network:
     driver: bridge

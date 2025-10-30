@@ -32,21 +32,21 @@ class UserSeeder extends Seeder
             'id' => (string) \Illuminate\Support\Str::uuid(),
             'user_id' => $adminUser->id,
             'role' => 'super_admin',
-            'permissions' => json_encode([
-                'comptes.create',
-                'comptes.read',
-                'comptes.update',
-                'comptes.delete',
-                'comptes.block',
-                'comptes.archive',
-                'comptes.unarchive',
-                'users.manage',
-                'system.admin'
-            ]),
             'metadata' => json_encode([
                 'created_by' => 'system',
                 'department' => 'IT',
-                'level' => 'super_admin'
+                'level' => 'super_admin',
+                'permissions' => [
+                    'comptes.create',
+                    'comptes.read',
+                    'comptes.update',
+                    'comptes.delete',
+                    'comptes.block',
+                    'comptes.archive',
+                    'comptes.unarchive',
+                    'users.manage',
+                    'system.admin'
+                ]
             ])
         ]);
 

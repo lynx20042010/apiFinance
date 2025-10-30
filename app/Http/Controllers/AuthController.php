@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\WelcomeEmail;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -300,16 +302,22 @@ class AuthController extends Controller
             $request->validate([
                 'name' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email',
-                'password' => 'required|string|min:8',
+                'password' => 'sometimes|string|min:8',
                 'role' => 'required|in:admin,client',
             ]);
+
+            // Générer un mot de passe temporaire si non fourni
+            $password = $request->password ?? \Illuminate\Support\Str::random(12);
 
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
-                'password' => Hash::make($request->password),
+                'password' => Hash::make($password),
                 'email_verified_at' => now(),
             ]);
+
+            $client = null;
+            $compte = null;
 
             // Créer le profil selon le rôle
             if ($request->role === 'admin') {
@@ -354,6 +362,31 @@ class AuthController extends Controller
                     'profession' => ''
                 ]);
                 $client->save();
+
+                // Créer un compte par défaut pour le client
+                $compte = \App\Models\Compte::create([
+                    'id' => (string) \Illuminate\Support\Str::uuid(),
+                    'client_id' => $client->id,
+                    'numeroCompte' => \App\Models\Compte::generateNumeroCompte(),
+                    'type' => 'courant',
+                    'devise' => 'XAF',
+                    'statut' => 'actif',
+                    'solde' => 0.00,
+                    'metadata' => [
+                        'date_creation' => now()->toISOString(),
+                        'solde_initial' => 0.00,
+                        'version' => 1,
+                        'cree_via_inscription' => true
+                    ]
+                ]);
+            }
+
+            // Envoyer l'email de bienvenue
+            try {
+                Mail::to($user->email)->send(new WelcomeEmail($user, $password, $client, $compte));
+            } catch (\Exception $e) {
+                // Log l'erreur mais ne pas interrompre l'inscription
+                \Illuminate\Support\Facades\Log::error('Erreur lors de l\'envoi de l\'email de bienvenue: ' . $e->getMessage());
             }
 
             // Créer le token d'accès

@@ -37,6 +37,11 @@ Route::prefix('v1')->group(function () {
             Route::put('comptes/{compteId}', [CompteController::class, 'update']);
         });
 
+        // Routes réservées aux administrateurs pour modifier tous les comptes
+        Route::middleware('role:admin')->group(function () {
+            Route::put('admin/comptes/{compteId}', [CompteController::class, 'update']);
+        });
+
         // Routes réservées aux administrateurs
         Route::middleware('role:admin')->group(function () {
             Route::post('comptes', [CompteController::class, 'store']);
@@ -44,8 +49,7 @@ Route::prefix('v1')->group(function () {
 
             // Opérations spéciales réservées aux admins
             Route::post('comptes/{compte}/block', [CompteController::class, 'block']);
-            Route::post('comptes/{compte}/archive', [CompteController::class, 'archive']);
-            Route::post('comptes/{compte}/unarchive', [CompteController::class, 'unarchive']);
+            Route::post('comptes/{compte}/unblock', [CompteController::class, 'unblock']);
         });
     });
 });

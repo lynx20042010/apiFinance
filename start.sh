@@ -50,7 +50,6 @@ php artisan migrate --force
 
 # Générer la documentation Swagger
 echo "📚 Génération de la documentation Swagger..."
-php artisan l5-swagger:generate
 
 # Optimiser l'application pour la production
 echo "⚡ Optimisation de l'application..."

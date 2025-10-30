@@ -14,6 +14,7 @@ class AdminSeeder extends Seeder
     {
         // Créer un admin par défaut pour les tests
         $user = \App\Models\User::create([
+            'id' => (string) \Illuminate\Support\Str::uuid(),
             'name' => 'Admin Test',
             'email' => 'admin@example.com',
             'password' => \Illuminate\Support\Facades\Hash::make('admin123'),
@@ -24,21 +25,21 @@ class AdminSeeder extends Seeder
             'id' => (string) \Illuminate\Support\Str::uuid(),
             'user_id' => $user->id,
             'role' => 'admin',
-            'permissions' => json_encode([
-                'comptes.create',
-                'comptes.read',
-                'comptes.update',
-                'comptes.delete',
-                'comptes.block',
-                'comptes.archive',
-                'comptes.unarchive',
-                'users.manage',
-                'system.admin'
-            ]),
             'metadata' => json_encode([
                 'created_by' => 'seeder',
                 'department' => 'IT',
-                'level' => 'admin'
+                'level' => 'admin',
+                'permissions' => [
+                    'comptes.create',
+                    'comptes.read',
+                    'comptes.update',
+                    'comptes.delete',
+                    'comptes.block',
+                    'comptes.archive',
+                    'comptes.unarchive',
+                    'users.manage',
+                    'system.admin'
+                ]
             ])
         ]);
     }

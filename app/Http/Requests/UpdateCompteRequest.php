@@ -22,7 +22,7 @@ class UpdateCompteRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'type' => 'sometimes|in:cheque,courant,epargne,titre,devise',
+            'type' => 'sometimes|in:cheque,courant,epargne',
             'devise' => 'sometimes|string|size:3|in:XAF,EUR,USD,CAD,GBP',
             'statut' => 'sometimes|in:actif,inactif,bloque,ferme',
             'metadata' => 'sometimes|array',

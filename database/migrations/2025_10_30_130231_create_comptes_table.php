@@ -12,15 +12,19 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('comptes', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('client_id')->constrained()->onDelete('cascade');
+            $table->string('id')->primary();
+            $table->string('client_id');
             $table->string('numeroCompte')->unique();
-            $table->enum('type', ['cheque', 'courant', 'epargne', 'titre', 'devise']);
-            $table->string('devise', 3)->default('XAF');
-            $table->enum('statut', ['actif', 'inactif', 'bloque', 'ferme', 'archive'])->default('actif');
+            $table->enum('type', ['courant', 'epargne', 'entreprise']);
+            $table->string('devise', 3)->default('XOF');
+            $table->enum('statut', ['actif', 'inactif', 'bloque', 'archive'])->default('actif');
             $table->decimal('solde', 15, 2)->default(0);
             $table->json('metadata')->nullable();
             $table->timestamps();
+
+            $table->foreign('client_id')->references('id')->on('clients')->onDelete('cascade');
+            $table->index(['client_id', 'statut']);
+            $table->index(['type', 'statut']);
         });
     }
 

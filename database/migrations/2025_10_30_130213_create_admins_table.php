@@ -12,11 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('admins', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
+            $table->string('id')->primary();
+            $table->string('user_id');
             $table->enum('role', ['super_admin', 'admin', 'moderator'])->default('admin');
             $table->json('metadata')->nullable();
             $table->timestamps();
+
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });
     }
 

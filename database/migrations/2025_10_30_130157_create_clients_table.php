@@ -12,15 +12,17 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('clients', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
+            $table->string('id')->primary();
+            $table->string('user_id');
             $table->string('numeroCompte')->unique();
             $table->string('titulaire');
             $table->enum('type', ['particulier', 'entreprise']);
-            $table->string('devise', 3)->default('XAF');
+            $table->string('devise', 3)->default('XOF');
             $table->enum('statut', ['actif', 'inactif', 'suspendu'])->default('actif');
             $table->json('metadata')->nullable();
             $table->timestamps();
+
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });
     }
 

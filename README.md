@@ -1,231 +1,226 @@
 # API Finance - Gestion des Comptes Bancaires
 
-Une API RESTful moderne développée avec Laravel 10 pour la gestion complète des comptes bancaires et transactions financières.
+Une API RESTful complète pour la gestion des comptes bancaires, clients et transactions financières avec authentification OAuth2.
 
 ## 🚀 Fonctionnalités
 
-### Gestion des Clients
-- ✅ Création automatique de clients avec génération de comptes
-- ✅ Gestion des informations personnelles (nom, email, téléphone, adresse)
-- ✅ Authentification automatique avec génération de mot de passe temporaire
-- ✅ Support des clients particuliers et entreprises
+- ✅ Authentification JWT avec Laravel Sanctum
+- ✅ Gestion complète des comptes bancaires (courant, épargne, chèque)
+- ✅ Gestion des clients avec profils détaillés
+- ✅ Système de rôles (Admin/Client)
+- ✅ API RESTful avec documentation Swagger/OpenAPI
+- ✅ Architecture microservices prête pour la production
+- ✅ Support Docker complet
+- ✅ Cache Redis et files d'attente
+- ✅ Logs et monitoring
 
-### Gestion des Comptes
-- ✅ Création de comptes (courant, épargne, titre, devise)
-- ✅ Gestion des soldes et devises multiples (XAF, EUR, USD, CAD, GBP)
-- ✅ Statuts de comptes (actif, inactif, bloqué, fermé, archivé)
-- ✅ Numéros de compte uniques générés automatiquement
+## 🛠️ Technologies
 
-### Gestion des Transactions
-- ✅ Types de transactions : dépôt, retrait, virement, transfert, commission, intérêt
-- ✅ Suivi des statuts (en attente, traitée, annulée, échouée)
-- ✅ Historique complet avec métadonnées
-
-### Opérations Avancées
-- ✅ Blocage/déblocage des comptes épargne
-- ✅ Archivage des comptes fermés
-- ✅ Suppression sécurisée avec vérifications
-
-## 🏗️ Architecture
-
-### Base de Données (PostgreSQL)
-```
-User (UUID) ────1:N─── Client (UUID)
-    │                     │
-    │                     │
-    └──1:1─── Admin       └──1:N─── Compte (UUID)
-                              │
-                              └──1:N─── Transaction (UUID)
-```
-
-### Technologies Utilisées
-- **Laravel 10** - Framework PHP moderne
-- **PostgreSQL** - Base de données robuste
-- **Laravel Passport** - Authentification OAuth2
-- **Laravel Debugbar** - Outil de débogage (désactivé en prod)
-- **Swagger/OpenAPI** - Documentation interactive
-- **Docker** - Conteneurisation
+- **Framework**: Laravel 10
+- **Langage**: PHP 8.2
+- **Base de données**: PostgreSQL
+- **Cache/Queue**: Redis
+- **Serveur Web**: Nginx
+- **Conteneurisation**: Docker & Docker Compose
+- **Documentation**: Swagger/OpenAPI 3.0
 
 ## 📋 Prérequis
 
-- PHP 8.1+
-- Composer
-- PostgreSQL 12+
-- Docker & Docker Compose (optionnel)
+- Docker & Docker Compose
+- Make (optionnel, pour utiliser les commandes du Makefile)
 
-## 🛠️ Installation
+## 🚀 Installation et Démarrage
 
-### Installation Locale (avec Docker)
+### Développement
 
 1. **Cloner le projet**
-```bash
-git clone <repository-url>
-cd apiFinance
-```
-
-2. **Configuration Docker**
-```bash
-# Le docker-compose.yml est déjà configuré
-docker compose up --build
-```
-
-3. **Configuration de la base de données**
-```bash
-# Dans le container Docker
-php artisan migrate
-php artisan passport:install
-```
-
-### Installation Traditionnelle
-
-1. **Installation des dépendances**
-```bash
-composer install
-```
+   ```bash
+   git clone <repository-url>
+   cd api-finance
+   ```
 
 2. **Configuration**
+   ```bash
+   cp .env.example .env
+   # Éditer .env avec vos paramètres
+   ```
+
+3. **Démarrage avec Docker**
+   ```bash
+   # Avec Make (recommandé)
+   make setup
+
+   # Ou manuellement
+   docker-compose build --no-cache
+   docker-compose up -d
+   docker-compose exec app php artisan migrate
+   docker-compose exec app php artisan db:seed
+   ```
+
+4. **Accès à l'application**
+   - API: http://localhost:8000
+   - Documentation Swagger: http://localhost:8000/api/documentation
+
+### Production
+
 ```bash
-cp .env.example .env
-php artisan key:generate
-```
+# Build et démarrage en production
+make build-prod
+make up-prod
 
-3. **Base de données**
-```bash
-# Configurer PostgreSQL dans .env
-php artisan migrate
-php artisan passport:install
-```
-
-## ⚙️ Configuration
-
-### Variables d'Environnement (.env)
-
-```env
-# Application
-APP_NAME=apiFinance
-APP_ENV=local
-APP_KEY=base64:...
-APP_DEBUG=true
-APP_URL=http://localhost:8000
-
-# Base de données PostgreSQL
-DB_CONNECTION=pgsql
-DB_HOST=dpg-d40bs9jipnbc73cirh4g-a.oregon-postgres.render.com
-DB_PORT=5432
-DB_DATABASE=apifinacedb
-DB_USERNAME=apifinacedb_user
-DB_PASSWORD=vqZVTXI4pkrE6Txg4Ell6McKz7qJncj9
-
-# Debugbar (désactivé en production)
-DEBUGBAR_ENABLED=false
+# Ou manuellement
+docker-compose -f docker-compose.prod.yml build --no-cache
+docker-compose -f docker-compose.prod.yml up -d
 ```
 
 ## 📚 Documentation API
 
-### Accès à la Documentation
-- **Production** : `https://apifinance.onrender.com/ndeyendiaye/documentation`
-- **Local** : `http://localhost:8000/docs`
+La documentation complète est disponible via Swagger UI :
 
-### Authentification
-L'API utilise OAuth2 avec Laravel Passport :
-- **Client Personnel** : Pour les applications mobiles
-- **Client Mot de Passe** : Pour l'authentification utilisateur
+**URL**: `http://localhost:8000/api/documentation`
 
-## 🔌 Endpoints API
+### Endpoints Principaux
 
-### Comptes (`/api/v1/comptes`)
+#### Authentification
+- `POST /api/v1/auth/register` - Inscription
+- `POST /api/v1/auth/login` - Connexion
+- `POST /api/v1/auth/refresh` - Rafraîchir token
+- `GET /api/v1/auth/me` - Profil utilisateur
 
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/v1/comptes` | Lister les comptes (avec pagination/filtres) |
-| POST | `/api/v1/comptes` | Créer un nouveau compte |
-| GET | `/api/v1/comptes/{id}` | Détails d'un compte |
-| PUT | `/api/v1/comptes/{id}` | Modifier un compte |
-| POST | `/api/v1/comptes/{id}/block` | Bloquer un compte épargne |
-| POST | `/api/v1/comptes/{id}/unblock` | Débloquer un compte épargne |
-| POST | `/api/v1/comptes/{id}/archive` | Archiver un compte fermé |
-| POST | `/api/v1/comptes/{id}/unarchive` | Désarchiver un compte |
-| DELETE | `/api/v1/comptes/{id}` | Supprimer un compte |
+#### Comptes (Admin seulement pour création/modification globale)
+- `GET /api/v1/comptes` - Lister les comptes
+- `POST /api/v1/comptes` - Créer un compte
+- `GET /api/v1/comptes/{id}` - Détails d'un compte
+- `PUT /api/v1/comptes/{id}` - Modifier un compte (clients: leurs comptes uniquement)
+- `PUT /api/v1/admin/comptes/{id}` - Modifier n'importe quel compte (admin uniquement)
+- `DELETE /api/v1/comptes/{id}` - Supprimer un compte
 
-### Exemple de Création de Compte
+#### Opérations Spéciales (Admin uniquement)
+- `POST /api/v1/comptes/{id}/block` - Bloquer un compte épargne
+- `POST /api/v1/comptes/{id}/unblock` - Débloquer un compte épargne
+- `POST /api/v1/comptes/{id}/archive` - Archiver un compte
+- `POST /api/v1/comptes/{id}/unarchive` - Désarchiver un compte
 
+## 🔧 Commandes Utiles
+
+### Avec Make
 ```bash
-curl -X POST https://apifinance.onrender.com/api/v1/comptes \
-  -H "Content-Type: application/json" \
-  -d '{
-    "type": "courant",
-    "soldeInitial": 50000,
-    "devise": "XAF",
-    "client": {
-      "titulaire": "Jean Dupont",
-      "email": "jean@example.com",
-      "telephone": "+221771234567",
-      "adresse": "Dakar, Sénégal"
-    }
-  }'
+make help           # Liste des commandes disponibles
+make build          # Build des images Docker
+make up             # Démarrer les conteneurs
+make down           # Arrêter les conteneurs
+make logs           # Voir les logs
+make shell          # Accès shell du conteneur app
+make db-shell       # Accès shell PostgreSQL
+make test           # Exécuter les tests
+make migrate        # Exécuter les migrations
+make seed           # Seeder la base de données
+make cache-clear    # Vider les caches
+make clean          # Nettoyer complètement
 ```
 
-**Réponse :**
-```json
-{
-  "success": true,
-  "message": "Compte créé avec succès",
-  "data": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "numeroCompte": "CPT2025000001",
-    "titulaire": "Jean Dupont",
-    "type": "courant",
-    "solde": 50000,
-    "devise": "XAF",
-    "statut": "actif",
-    "dateCreation": "2025-10-29T06:46:50Z"
-  }
-}
+### Avec Docker Compose
+```bash
+# Développement
+docker-compose exec app php artisan migrate
+docker-compose exec app php artisan db:seed
+docker-compose exec app php artisan test
+docker-compose logs -f app
+
+# Production
+docker-compose -f docker-compose.prod.yml exec app php artisan migrate
+docker-compose -f docker-compose.prod.yml logs -f
 ```
 
 ## 🧪 Tests
 
-### Exécution des Tests
 ```bash
-php artisan test
-```
+# Exécuter tous les tests
+make test
 
-### Tests Disponibles
-- ✅ Tests des modèles (Client, Compte, Transaction)
-- ✅ Tests des contrôleurs API
-- ✅ Tests des factories
-- ✅ Tests des requêtes de validation
-
-## 🚀 Déploiement
-
-### Sur Render
-Le projet est configuré pour le déploiement sur Render avec :
-- ✅ `render.yaml` pour la configuration
-- ✅ Docker support
-- ✅ Variables d'environnement
-- ✅ Base de données PostgreSQL externe
-
-### Commandes de Déploiement
-```bash
-# Build et déploiement
-docker build -t apifinance .
-docker run -p 8000:8000 apifinance
+# Avec couverture
+docker-compose exec app php artisan test --coverage
 ```
 
 ## 🔒 Sécurité
 
-- ✅ Authentification OAuth2 avec Passport
-- ✅ Validation stricte des données d'entrée
-- ✅ Protection CSRF
-- ✅ Sanitisation des entrées
-- ✅ Logs d'audit pour les opérations sensibles
+- Authentification JWT avec Laravel Sanctum
+- Autorisation basée sur les rôles (Admin/Client)
+- Validation stricte des données d'entrée
+- Protection CSRF
+- Headers de sécurité HTTP
+- Logs d'audit complets
 
-## 📊 Monitoring
+## 📊 Architecture
 
-- ✅ Laravel Debugbar (développement uniquement)
-- ✅ Logs structurés
-- ✅ Métriques de performance
-- ✅ Gestion d'erreurs complète
+```
+api-finance/
+├── app/                    # Code de l'application Laravel
+├── config/                 # Configuration Laravel
+├── database/               # Migrations et seeders
+├── docker/                 # Configuration Docker
+│   ├── nginx/             # Configuration Nginx
+│   └── php/               # Configuration PHP
+├── public/                # Assets publics
+├── resources/             # Views et assets
+├── routes/                # Définition des routes API
+├── storage/               # Fichiers temporaires et logs
+├── tests/                 # Tests unitaires et fonctionnels
+├── docker-compose.yml     # Configuration développement
+├── docker-compose.prod.yml # Configuration production
+├── Dockerfile            # Image Docker de l'application
+└── Makefile             # Commandes d'automatisation
+```
+
+## 🚀 Déploiement
+
+### Variables d'environnement requises
+
+```env
+APP_NAME="API Finance"
+APP_ENV=production
+APP_KEY=base64:your-app-key
+APP_DEBUG=false
+
+# Base de données
+DB_CONNECTION=pgsql
+DB_HOST=db
+DB_DATABASE=api_finance
+DB_USERNAME=api_user
+DB_PASSWORD=your-secure-password
+
+# Redis
+REDIS_HOST=redis
+REDIS_PASSWORD=your-redis-password
+
+# Cache et Queue
+CACHE_STORE=redis
+QUEUE_CONNECTION=redis
+SESSION_DRIVER=redis
+```
+
+### Commandes de déploiement
+
+```bash
+# Build de production
+docker-compose -f docker-compose.prod.yml build
+
+# Démarrage
+docker-compose -f docker-compose.prod.yml up -d
+
+# Migration de la base de données
+docker-compose -f docker-compose.prod.yml exec app php artisan migrate --force
+
+# Génération de la documentation
+docker-compose -f docker-compose.prod.yml exec app php artisan l5-swagger:generate
+```
+
+## 📈 Monitoring
+
+- Logs Laravel centralisés
+- Métriques de performance
+- Health checks intégrés
+- Monitoring des files d'attente Redis
 
 ## 🤝 Contribution
 
@@ -242,9 +237,9 @@ Ce projet est sous licence MIT - voir le fichier [LICENSE](LICENSE) pour plus de
 ## 📞 Support
 
 Pour toute question ou problème :
-- 📧 Email : support@apifinance.com
-- 📚 Documentation : `https://apifinance.onrender.com/ndeyendiaye/documentation`
-- 🐛 Issues : GitHub Issues
+- Ouvrir une issue sur GitHub
+- Contacter l'équipe de développement
+- Consulter la documentation Swagger
 
 ---
 

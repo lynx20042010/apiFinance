@@ -1,0 +1,116 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-finance-app-prod
+    restart: unless-stopped
+    working_dir: /var/www
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - DB_CONNECTION=pgsql
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_DATABASE=${DB_DATABASE:-api_finance}
+      - DB_USERNAME=${DB_USERNAME:-api_user}
+      - DB_PASSWORD=${DB_PASSWORD:-api_password}
+      - REDIS_HOST=redis
+      - CACHE_STORE=redis
+      - QUEUE_CONNECTION=redis
+      - SESSION_DRIVER=redis
+    volumes:
+      - ./:/var/www
+      - ./docker/php/production.ini:/usr/local/etc/php/conf.d/production.ini
+    networks:
+      - app-network
+    depends_on:
+      - db
+      - redis
+
+  nginx:
+    image: nginx:alpine
+    container_name: api-finance-nginx-prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./:/var/www
+      - ./docker/nginx/conf.d/:/etc/nginx/conf.d/
+      - ./docker/ssl:/etc/ssl/certs
+    networks:
+      - app-network
+    depends_on:
+      - app
+
+  db:
+    image: postgres:15-alpine
+    container_name: api-finance-db-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-api_finance}
+      POSTGRES_USER: ${DB_USERNAME:-api_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-api_password}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-network
+
+  redis:
+    image: redis:alpine
+    container_name: api-finance-redis-prod
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    networks:
+      - app-network
+
+  queue-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-finance-queue-prod
+    restart: unless-stopped
+    working_dir: /var/www
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+    command: php artisan queue:work --sleep=3 --tries=3 --max-jobs=1000 --timeout=90
+    volumes:
+      - ./:/var/www
+    networks:
+      - app-network
+    depends_on:
+      - app
+      - db
+      - redis
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-finance-scheduler-prod
+    restart: unless-stopped
+    working_dir: /var/www
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+    command: bash -c "while true; do php artisan schedule:run --verbose --no-interaction; sleep 60; done"
+    volumes:
+      - ./:/var/www
+    networks:
+      - app-network
+    depends_on:
+      - app
+      - db
+
+volumes:
+  db-data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
