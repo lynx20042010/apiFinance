@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'default' => env('DB_CONNECTION', 'mysql'),
+    'default' => env('DB_CONNECTION', 'render'),
 
     /*
     |--------------------------------------------------------------------------
@@ -91,6 +91,37 @@ return [
             'prefix_indexes' => true,
             // 'encrypt' => env('DB_ENCRYPT', 'yes'),
             // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
+        ],
+
+        'render' => [
+            'driver' => 'pgsql',
+            'url' => env('RENDER_DATABASE_URL'),
+            'host' => env('DB_HOST', 'dpg-d40bs9jipnbc73cirh4g-a'),
+            'port' => env('DB_PORT', '5432'),
+            'database' => env('DB_DATABASE', 'apifinacedb'),
+            'username' => env('DB_USERNAME', 'apifinacedb_user'),
+            'password' => env('DB_PASSWORD', 'vqZVTXI4pkrE6Txg4Ell6McKz7qJncj9'),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => 'require',
+        ],
+
+        'neon' => [
+            'driver' => 'pgsql',
+            'url' => env('NEON_DATABASE_URL'),
+            'host' => env('NEON_DB_HOST', 'ep-sweet-pond-ahr7xobd-pooler.c-3.us-east-1.aws.neon.tech'),
+            'port' => env('NEON_DB_PORT', '5432'),
+            'database' => env('NEON_DB_DATABASE', 'neondb'),
+            'username' => env('NEON_DB_USERNAME', 'neondb_owner'),
+            'password' => env('NEON_DB_PASSWORD', 'npg_2iAkDpuRlF8f'),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => 'require',
+            'channel_binding' => 'require',
         ],
 
     ],

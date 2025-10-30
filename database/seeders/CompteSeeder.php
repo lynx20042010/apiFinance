@@ -29,6 +29,7 @@ class CompteSeeder extends Seeder
         // Créer des comptes spécifiques pour les tests
         $clientDupont = \App\Models\Client::where('numeroCompte', 'CLT2024000001')->first();
         if ($clientDupont) {
+            // Compte courant
             \App\Models\Compte::factory()->create([
                 'client_id' => $clientDupont->id,
                 'numeroCompte' => 'CPT2024000001',
@@ -44,6 +45,7 @@ class CompteSeeder extends Seeder
                 ]
             ]);
 
+            // Compte épargne (pour les tests de blocage)
             \App\Models\Compte::factory()->create([
                 'client_id' => $clientDupont->id,
                 'numeroCompte' => 'CPT2024000002',
@@ -58,10 +60,27 @@ class CompteSeeder extends Seeder
                     'iban' => 'CM2110123456789012345678902'
                 ]
             ]);
+
+            // Compte chèque
+            \App\Models\Compte::factory()->create([
+                'client_id' => $clientDupont->id,
+                'numeroCompte' => 'CPT2024000004',
+                'type' => 'cheque',
+                'devise' => 'XAF',
+                'statut' => 'actif',
+                'solde' => 75000.00,
+                'metadata' => [
+                    'date_ouverture' => '2024-04-05',
+                    'agence' => 'Yaoundé Centre',
+                    'rib' => 'CM2110123456789012345678904',
+                    'iban' => 'CM2110123456789012345678904'
+                ]
+            ]);
         }
 
         $clientTechCorp = \App\Models\Client::where('numeroCompte', 'CLT2024000002')->first();
         if ($clientTechCorp) {
+            // Compte courant
             \App\Models\Compte::factory()->create([
                 'client_id' => $clientTechCorp->id,
                 'numeroCompte' => 'CPT2024000003',
@@ -74,6 +93,38 @@ class CompteSeeder extends Seeder
                     'agence' => 'Douala Bonanjo',
                     'rib' => 'CM2110123456789012345678903',
                     'iban' => 'CM2110123456789012345678903'
+                ]
+            ]);
+
+            // Compte épargne pour TechCorp
+            \App\Models\Compte::factory()->create([
+                'client_id' => $clientTechCorp->id,
+                'numeroCompte' => 'CPT2024000005',
+                'type' => 'epargne',
+                'devise' => 'USD',
+                'statut' => 'actif',
+                'solde' => 100000.00,
+                'metadata' => [
+                    'date_ouverture' => '2024-05-12',
+                    'agence' => 'Douala Bonanjo',
+                    'rib' => 'CM2110123456789012345678905',
+                    'iban' => 'CM2110123456789012345678905'
+                ]
+            ]);
+
+            // Compte chèque pour TechCorp
+            \App\Models\Compte::factory()->create([
+                'client_id' => $clientTechCorp->id,
+                'numeroCompte' => 'CPT2024000006',
+                'type' => 'cheque',
+                'devise' => 'XAF',
+                'statut' => 'actif',
+                'solde' => 200000.00,
+                'metadata' => [
+                    'date_ouverture' => '2024-06-18',
+                    'agence' => 'Douala Bonanjo',
+                    'rib' => 'CM2110123456789012345678906',
+                    'iban' => 'CM2110123456789012345678906'
                 ]
             ]);
         }

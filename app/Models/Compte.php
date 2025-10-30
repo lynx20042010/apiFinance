@@ -11,6 +11,22 @@ class Compte extends Model
 {
     use HasFactory;
 
+    protected $connection = 'neon';
+
+    /**
+     * Get the appropriate connection based on account status
+     */
+    public function getConnectionName()
+    {
+        // Use Neon only for blocked accounts
+        if ($this->statut === 'bloque') {
+            return 'neon';
+        }
+
+        // Use default connection for all other accounts
+        return config('database.default');
+    }
+
     protected $fillable = [
         'client_id',
         'numeroCompte',
@@ -146,5 +162,59 @@ class Compte extends Model
         } else {
             return $query->globalScope();
         }
+    }
+
+    /**
+     * Scope pour les comptes épargne bloqués
+     */
+    public function scopeEpargneBloque($query)
+    {
+        return $query->where('type', 'epargne')
+                    ->where('statut', 'bloque');
+    }
+
+    /**
+     * Vérifier si le compte peut être archivé
+     * Un compte épargne bloqué peut être archivé si la date de début de blocage est échue (plus de 30 jours)
+     */
+    public function peutEtreArchive(): bool
+    {
+        if ($this->type !== 'epargne' || $this->statut !== 'bloque') {
+            return false;
+        }
+
+        $dateBlocage = $this->metadata['dateBlocage'] ?? null;
+        if (!$dateBlocage) {
+            return false;
+        }
+
+        return \Carbon\Carbon::parse($dateBlocage)->addDays(30)->isPast();
+    }
+
+    /**
+     * Vérifier si le compte peut être désarchivé
+     * Un compte épargne bloqué peut être désarchivé si la date de fin de blocage est échue
+     */
+    public function peutEtreDesarchive(): bool
+    {
+        if ($this->type !== 'epargne' || $this->statut !== 'bloque') {
+            return false;
+        }
+
+        $dateFinBlocage = $this->metadata['dateFinBlocage'] ?? null;
+        if (!$dateFinBlocage) {
+            return false;
+        }
+
+        return \Carbon\Carbon::parse($dateFinBlocage)->isPast();
+    }
+
+    /**
+     * Vérifier si le compte peut être débloqué
+     * Alias pour peutEtreDesarchive selon les règles métier
+     */
+    public function peutEtreDebloque(): bool
+    {
+        return $this->peutEtreDesarchive();
     }
 }

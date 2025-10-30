@@ -11,21 +11,29 @@ use App\Models\Compte;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 /**
  * @OA\Info(
  *     title="API Finance - Gestion des Comptes",
  *     version="1.0.0",
- *     description="API RESTful pour la gestion des comptes bancaires et transactions financières"
+ *     description="API RESTful pour la gestion des comptes bancaires et transactions financières avec authentification OAuth2"
+ * )
+ * @OA\Server(
+ *     url="http://localhost:8000/api",
+ *     description="Serveur de développement"
  * )
  * @OA\Server(
  *     url="https://apifinance.onrender.com/api",
  *     description="Serveur de production"
  * )
- * @OA\Server(
- *     url="http://localhost:8000/api",
- *     description="Serveur de développement"
+ * @OA\SecurityScheme(
+ *     securityScheme="bearerAuth",
+ *     type="http",
+ *     scheme="bearer",
+ *     bearerFormat="JWT",
+ *     description="Token d'accès OAuth2 obtenu via /api/v1/auth/login"
  * )
  */
 
@@ -41,6 +49,7 @@ class CompteController extends Controller
      *     description="Récupère la liste paginée des comptes avec possibilité de filtrage et tri",
      *     operationId="getComptes",
      *     tags={"Comptes"},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
@@ -58,14 +67,14 @@ class CompteController extends Controller
      *     @OA\Parameter(
      *         name="type",
      *         in="query",
-     *         description="Type de compte",
+     *         description="Type de compte (admin seulement)",
      *         required=false,
      *         @OA\Schema(type="string", enum={"cheque", "courant", "epargne"})
      *     ),
      *     @OA\Parameter(
      *         name="statut",
      *         in="query",
-     *         description="Statut du compte",
+     *         description="Statut du compte (admin seulement)",
      *         required=false,
      *         @OA\Schema(type="string", enum={"actif", "inactif", "bloque", "ferme"})
      *     ),
@@ -158,8 +167,20 @@ class CompteController extends Controller
             'order' => 'sometimes|in:asc,desc'
         ]);
 
-        // Construction de la requête avec filtrage par défaut (seulement comptes actifs)
-        $query = Compte::with(['client.user'])->where('statut', 'actif');
+        $user = Auth::guard('api')->user();
+
+        // Construction de la requête
+        $query = Compte::with(['client.user']);
+
+        // Filtrage selon le rôle de l'utilisateur
+        if ($user->admin) {
+            // Admin voit tous les comptes (sauf archivés)
+            $query->where('statut', '!=', 'archive');
+        } else {
+            // Client ne voit que ses propres comptes actifs
+            $query->where('client_id', $user->client->id)
+                  ->where('statut', 'actif');
+        }
 
         // Filtres
         if ($request->has('type') && !empty($request->type)) {
@@ -364,12 +385,13 @@ class CompteController extends Controller
      *     description="Récupère les détails d'un compte spécifique par ID UUID ou numéro de compte. Admin peut voir tous les comptes, Client seulement les siens.",
      *     operationId="getCompte",
      *     tags={"Comptes"},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="compteId",
      *         in="path",
      *         description="ID UUID ou numéro de compte à récupérer",
      *         required=true,
-     *         @OA\Schema(type="string", format="uuid")
+     *         @OA\Schema(type="string")
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -462,9 +484,21 @@ class CompteController extends Controller
             ], 404);
         }
 
-        // TODO: Implémenter la logique d'autorisation
-        // Pour l'instant, on permet l'accès à tous les comptes
-        // Plus tard, vérifier si l'utilisateur est admin ou propriétaire du compte
+        $user = Auth::guard('api')->user();
+
+        // Vérification des autorisations
+        if (!$user->admin && $compte->client_id !== $user->client->id) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'ACCESS_DENIED',
+                    'message' => 'Vous n\'avez pas accès à ce compte',
+                    'details' => [
+                        'compteId' => $compteId
+                    ]
+                ]
+            ], 403);
+        }
 
         return response()->json([
             'success' => true,
@@ -479,12 +513,13 @@ class CompteController extends Controller
      *     description="Met à jour les informations d'un compte existant. Seuls certains champs peuvent être modifiés pour des raisons de sécurité.",
      *     operationId="updateCompte",
      *     tags={"Comptes"},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="compteId",
      *         in="path",
      *         description="ID UUID ou numéro de compte à mettre à jour",
      *         required=true,
-     *         @OA\Schema(type="string", format="uuid")
+     *         @OA\Schema(type="string")
      *     ),
      *     @OA\RequestBody(
      *         required=true,
@@ -582,6 +617,22 @@ class CompteController extends Controller
                     ]
                 ]
             ], 404);
+        }
+
+        $user = Auth::guard('api')->user();
+
+        // Vérification des autorisations pour les clients
+        if (!$user->admin && $compte->client_id !== $user->client->id) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'ACCESS_DENIED',
+                    'message' => 'Vous n\'avez pas accès à ce compte',
+                    'details' => [
+                        'compteId' => $compteId
+                    ]
+                ]
+            ], 403);
         }
 
         // Vérifications de sécurité avant mise à jour
@@ -792,18 +843,19 @@ class CompteController extends Controller
      *     description="Bloque un compte bancaire de type épargne. Cette opération n'est autorisée que pour les comptes épargne.",
      *     operationId="blockCompte",
      *     tags={"Comptes"},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="compteId",
      *         in="path",
      *         description="ID UUID ou numéro de compte à bloquer",
      *         required=true,
-     *         @OA\Schema(type="string", format="uuid")
+     *         @OA\Schema(type="string")
      *     ),
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
      *             @OA\Property(property="motif", type="string", maxLength=255, example="Suspicion d'activité frauduleuse"),
-     *             @OA\Property(property="dureeBlocage", type="integer", minimum=1, maximum=365, example=30, description="Durée en jours (optionnel)")
+     *             @OA\Property(property="dureeBlocage", type="integer", minimum=1, maximum=365, example=30, description="Durée en jours")
      *         )
      *     ),
      *     @OA\Response(
@@ -870,10 +922,11 @@ class CompteController extends Controller
         // Validation des données d'entrée
         $request->validate([
             'motif' => 'required|string|max:255',
-            'dureeBlocage' => 'sometimes|integer|min:1|max:365'
+            'dureeBlocage' => 'required|integer|min:1|max:365'
         ], [
             'motif.required' => 'Le motif de blocage est obligatoire.',
             'motif.max' => 'Le motif ne peut pas dépasser 255 caractères.',
+            'dureeBlocage.required' => 'La durée de blocage est obligatoire.',
             'dureeBlocage.integer' => 'La durée doit être un nombre entier.',
             'dureeBlocage.min' => 'La durée minimale est de 1 jour.',
             'dureeBlocage.max' => 'La durée maximale est de 365 jours.'
@@ -910,17 +963,19 @@ class CompteController extends Controller
             ], 404);
         }
 
-        // Vérifier que c'est un compte épargne
-        if ($compte->type !== 'epargne') {
+        // Vérifier que c'est un compte épargne actif
+        if ($compte->type !== 'epargne' || $compte->statut !== 'actif') {
             return response()->json([
                 'success' => false,
                 'error' => [
                     'code' => 'OPERATION_NOT_ALLOWED',
-                    'message' => 'Le blocage n\'est autorisé que pour les comptes épargne',
+                    'message' => 'Le blocage n\'est autorisé que pour les comptes épargne actifs',
                     'details' => [
                         'compteId' => $compteId,
                         'type' => $compte->type,
-                        'typeRequis' => 'epargne'
+                        'statut' => $compte->statut,
+                        'typeRequis' => 'epargne',
+                        'statutRequis' => 'actif'
                     ]
                 ]
             ], 400);
@@ -976,83 +1031,83 @@ class CompteController extends Controller
     }
 
     /**
-     * @OA\Post(
-     *     path="/v1/comptes/{compteId}/unblock",
-     *     summary="Débloquer un compte épargne",
-     *     description="Débloque un compte bancaire de type épargne précédemment bloqué.",
-     *     operationId="unblockCompte",
-     *     tags={"Comptes"},
-     *     @OA\Parameter(
-     *         name="compteId",
-     *         in="path",
-     *         description="ID UUID ou numéro de compte à débloquer",
-     *         required=true,
-     *         @OA\Schema(type="string", format="uuid")
-     *     ),
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             @OA\Property(property="motif", type="string", maxLength=255, example="Blocage levé suite à vérification")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Compte débloqué avec succès",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Compte débloqué avec succès"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="compteId", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
-     *                 @OA\Property(property="numeroCompte", type="string", example="CPT2025000001"),
-     *                 @OA\Property(property="type", type="string", example="epargne"),
-     *                 @OA\Property(property="statut", type="string", example="actif"),
-     *                 @OA\Property(property="dateDeblocage", type="string", format="date-time", example="2023-06-10T14:30:00Z")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=400,
-     *         description="Opération non autorisée pour ce type de compte",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(
-     *                 property="error",
-     *                 type="object",
-     *                 @OA\Property(property="code", type="string", example="OPERATION_NOT_ALLOWED"),
-     *                 @OA\Property(property="message", type="string", example="Le déblocage n'est autorisé que pour les comptes épargne")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Compte non trouvé",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(
-     *                 property="error",
-     *                 type="object",
-     *                 @OA\Property(property="code", type="string", example="COMPTE_NOT_FOUND"),
-     *                 @OA\Property(property="message", type="string", example="Le compte avec l'ID spécifié n'existe pas")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=409,
-     *         description="Compte non bloqué",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(
-     *                 property="error",
-     *                 type="object",
-     *                 @OA\Property(property="code", type="string", example="COMPTE_NOT_BLOCKED"),
-     *                 @OA\Property(property="message", type="string", example="Le compte n'est pas bloqué")
-     *             )
-     *         )
-     *     )
-     * )
-     */
+      * @OA\Post(
+      *     path="/v1/comptes/{compteId}/unblock",
+      *     summary="Débloquer manuellement un compte épargne (réservé aux administrateurs)",
+      *     description="Débloque manuellement un compte bancaire de type épargne précédemment bloqué. Cette opération est généralement automatique via job.",
+      *     operationId="unblockCompte",
+      *     tags={"Comptes"},
+      *     @OA\Parameter(
+      *         name="compteId",
+      *         in="path",
+      *         description="ID UUID ou numéro de compte à débloquer",
+      *         required=true,
+      *         @OA\Schema(type="string")
+      *     ),
+      *     @OA\RequestBody(
+      *         required=true,
+      *         @OA\JsonContent(
+      *             @OA\Property(property="motif", type="string", maxLength=255, example="Blocage levé suite à vérification")
+      *         )
+      *     ),
+      *     @OA\Response(
+      *         response=200,
+      *         description="Compte débloqué avec succès",
+      *         @OA\JsonContent(
+      *             @OA\Property(property="success", type="boolean", example=true),
+      *             @OA\Property(property="message", type="string", example="Compte débloqué avec succès"),
+      *             @OA\Property(
+      *                 property="data",
+      *                 type="object",
+      *                 @OA\Property(property="compteId", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
+      *                 @OA\Property(property="numeroCompte", type="string", example="CPT2025000001"),
+      *                 @OA\Property(property="type", type="string", example="epargne"),
+      *                 @OA\Property(property="statut", type="string", example="actif"),
+      *                 @OA\Property(property="dateDeblocage", type="string", format="date-time", example="2023-06-10T14:30:00Z")
+      *             )
+      *         )
+      *     ),
+      *     @OA\Response(
+      *         response=400,
+      *         description="Opération non autorisée pour ce type de compte",
+      *         @OA\JsonContent(
+      *             @OA\Property(property="success", type="boolean", example=false),
+      *             @OA\Property(
+      *                 property="error",
+      *                 type="object",
+      *                 @OA\Property(property="code", type="string", example="OPERATION_NOT_ALLOWED"),
+      *                 @OA\Property(property="message", type="string", example="Le déblocage n'est autorisé que pour les comptes épargne")
+      *             )
+      *         )
+      *     ),
+      *     @OA\Response(
+      *         response=404,
+      *         description="Compte non trouvé",
+      *         @OA\JsonContent(
+      *             @OA\Property(property="success", type="boolean", example=false),
+      *             @OA\Property(
+      *                 property="error",
+      *                 type="object",
+      *                 @OA\Property(property="code", type="string", example="COMPTE_NOT_FOUND"),
+      *                 @OA\Property(property="message", type="string", example="Le compte avec l'ID spécifié n'existe pas")
+      *             )
+      *         )
+      *     ),
+      *     @OA\Response(
+      *         response=409,
+      *         description="Compte non bloqué",
+      *         @OA\JsonContent(
+      *             @OA\Property(property="success", type="boolean", example=false),
+      *             @OA\Property(
+      *                 property="error",
+      *                 type="object",
+      *                 @OA\Property(property="code", type="string", example="COMPTE_NOT_BLOCKED"),
+      *                 @OA\Property(property="message", type="string", example="Le compte n'est pas bloqué")
+      *             )
+      *         )
+      *     )
+      * )
+      */
     public function unblock(Request $request, string $compteId): JsonResponse
     {
         // Validation des données d'entrée
@@ -1137,87 +1192,6 @@ class CompteController extends Controller
         ]);
     }
 
-    /**
-     * @OA\Post(
-     *     path="/v1/comptes/{compteId}/archive",
-     *     summary="Archiver un compte fermé",
-     *     description="Archive un compte bancaire fermé. Cette opération n'est autorisée que pour les comptes ayant le statut 'ferme'. L'archivage permet de conserver l'historique sans afficher le compte dans les listes actives.",
-     *     operationId="archiveCompte",
-     *     tags={"Comptes"},
-     *     @OA\Parameter(
-     *         name="compteId",
-     *         in="path",
-     *         description="ID UUID ou numéro de compte à archiver",
-     *         required=true,
-     *         @OA\Schema(type="string", format="uuid")
-     *     ),
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             @OA\Property(property="motif", type="string", maxLength=255, example="Archivage suite à clôture définitive du compte"),
-     *             @OA\Property(property="dureeArchivage", type="integer", minimum=365, maximum=2555, example=1825, description="Durée d'archivage en jours (minimum 1 an, maximum 7 ans)")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Compte archivé avec succès",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Compte archivé avec succès"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="compteId", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
-     *                 @OA\Property(property="numeroCompte", type="string", example="C00123456"),
-     *                 @OA\Property(property="type", type="string", example="courant"),
-     *                 @OA\Property(property="statut", type="string", example="archive"),
-     *                 @OA\Property(property="motifArchivage", type="string", example="Archivage suite à clôture définitive du compte"),
-     *                 @OA\Property(property="dateArchivage", type="string", format="date-time", example="2023-06-10T14:30:00Z"),
-     *                 @OA\Property(property="dateFinArchivage", type="string", format="date-time", example="2028-06-10T14:30:00Z")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=400,
-     *         description="Opération non autorisée pour ce type de compte",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(
-     *                 property="error",
-     *                 type="object",
-     *                 @OA\Property(property="code", type="string", example="OPERATION_NOT_ALLOWED"),
-     *                 @OA\Property(property="message", type="string", example="L'archivage n'est autorisé que pour les comptes fermés")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Compte non trouvé",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(
-     *                 property="error",
-     *                 type="object",
-     *                 @OA\Property(property="code", type="string", example="COMPTE_NOT_FOUND"),
-     *                 @OA\Property(property="message", type="string", example="Le compte avec l'ID spécifié n'existe pas")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=409,
-     *         description="Archivage impossible",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(
-     *                 property="error",
-     *                 type="object",
-     *                 @OA\Property(property="code", type="string", example="ARCHIVE_NOT_ALLOWED"),
-     *                 @OA\Property(property="message", type="string", example="Le compte ne peut pas être archivé car il n'est pas fermé")
-     *             )
-     *         )
-     *     )
-     * )
-     */
     public function archive(Request $request, string $compteId): JsonResponse
     {
         // Validation des données d'entrée
@@ -1263,7 +1237,9 @@ class CompteController extends Controller
             ], 404);
         }
 
-        // Vérifier que le compte est fermé
+        // Vérifier que le compte est fermé (mais selon les règles métier, c'est les comptes épargne bloqués qui sont archivés)
+        // Cependant, la méthode archive() semble être pour les comptes fermés, donc on garde cette logique
+        // Mais selon les exigences, l'archivage automatique est pour les comptes épargne bloqués
         if ($compte->statut !== 'ferme') {
             return response()->json([
                 'success' => false,
@@ -1326,71 +1302,6 @@ class CompteController extends Controller
         ]);
     }
 
-    /**
-     * @OA\Post(
-     *     path="/v1/comptes/{compteId}/unarchive",
-     *     summary="Désarchiver un compte",
-     *     description="Désarchive un compte bancaire précédemment archivé, le remettant dans son état antérieur.",
-     *     operationId="unarchiveCompte",
-     *     tags={"Comptes"},
-     *     @OA\Parameter(
-     *         name="compteId",
-     *         in="path",
-     *         description="ID UUID ou numéro de compte à désarchiver",
-     *         required=true,
-     *         @OA\Schema(type="string", format="uuid")
-     *     ),
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             @OA\Property(property="motif", type="string", maxLength=255, example="Désarchivage suite à demande du client")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Compte désarchivé avec succès",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Compte désarchivé avec succès"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="compteId", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
-     *                 @OA\Property(property="numeroCompte", type="string", example="C00123456"),
-     *                 @OA\Property(property="type", type="string", example="courant"),
-     *                 @OA\Property(property="statut", type="string", example="ferme"),
-     *                 @OA\Property(property="dateDesarchivage", type="string", format="date-time", example="2023-06-10T14:30:00Z")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Compte non trouvé",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(
-     *                 property="error",
-     *                 type="object",
-     *                 @OA\Property(property="code", type="string", example="COMPTE_NOT_FOUND"),
-     *                 @OA\Property(property="message", type="string", example="Le compte avec l'ID spécifié n'existe pas")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=409,
-     *         description="Désarchivage impossible",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(
-     *                 property="error",
-     *                 type="object",
-     *                 @OA\Property(property="code", type="string", example="UNARCHIVE_NOT_ALLOWED"),
-     *                 @OA\Property(property="message", type="string", example="Le compte n'est pas archivé")
-     *             )
-     *         )
-     *     )
-     * )
-     */
     public function unarchive(Request $request, string $compteId): JsonResponse
     {
         // Validation des données d'entrée
@@ -1481,12 +1392,13 @@ class CompteController extends Controller
      *     description="Supprime définitivement un compte bancaire. Cette opération est irréversible et nécessite que le compte soit vide de solde et sans transactions actives.",
      *     operationId="deleteCompte",
      *     tags={"Comptes"},
+     *     security={{"bearerAuth": {}}},
      *     @OA\Parameter(
      *         name="compteId",
      *         in="path",
      *         description="ID UUID ou numéro de compte à supprimer",
      *         required=true,
-     *         @OA\Schema(type="string", format="uuid")
+     *         @OA\Schema(type="string")
      *     ),
      *     @OA\Response(
      *         response=200,

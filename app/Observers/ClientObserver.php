@@ -55,8 +55,9 @@ class ClientObserver
     public function created(Client $client): void
     {
         // Mettre à jour les métadonnées après création
+        $currentMetadata = is_array($client->metadata) ? $client->metadata : json_decode($client->metadata ?? '{}', true);
         $client->update([
-            'metadata' => array_merge($client->metadata ?? [], [
+            'metadata' => array_merge($currentMetadata, [
                 'date_creation_confirmee' => now()->toISOString(),
                 'statut_creation' => 'succès'
             ])

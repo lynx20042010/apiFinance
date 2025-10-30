@@ -12,19 +12,29 @@ services:
       - APP_ENV=local
       - APP_DEBUG=true
       - APP_URL=http://localhost:8000
-      - DB_CONNECTION=pgsql
-      - DB_HOST=db
+      - DB_CONNECTION=render
+      # Configuration Render (base principale)
+      - RENDER_DATABASE_URL=postgresql://apifinacedb_user:vqZVTXI4pkrE6Txg4Ell6McKz7qJncj9@dpg-d40bs9jipnbc73cirh4g-a/apifinacedb
+      - DB_HOST=dpg-d40bs9jipnbc73cirh4g-a
       - DB_PORT=5432
-      - DB_DATABASE=laravel
-      - DB_USERNAME=laravel
-      - DB_PASSWORD=password
+      - DB_DATABASE=apifinancedb
+      - DB_USERNAME=apifinacedb_user
+      - DB_PASSWORD=vqZVTXI4pkrE6Txg4Ell6McKz7qJncj9
+      # Configuration Neon (pour comptes bloqués)
+      - NEON_DATABASE_URL=postgresql://neondb_owner:npg_2iAkDpuRlF8f@ep-sweet-pond-ahr7xobd-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+      - NEON_DB_HOST=ep-sweet-pond-ahr7xobd-pooler.c-3.us-east-1.aws.neon.tech
+      - NEON_DB_PORT=5432
+      - NEON_DB_DATABASE=neondb
+      - NEON_DB_USERNAME=neondb_owner
+      - NEON_DB_PASSWORD=npg_2iAkDpuRlF8f
       - LOG_CHANNEL=stack
       - CACHE_DRIVER=file
       - QUEUE_CONNECTION=sync
       - SESSION_DRIVER=file
       - RUN_MIGRATIONS=true
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
       - .:/var/www/html
       - /var/www/html/vendor
@@ -34,13 +44,18 @@ services:
   db:
     image: postgres:15
     environment:
-      - POSTGRES_DB=laravel
-      - POSTGRES_USER=laravel
-      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=apifinancedb
+      - POSTGRES_USER=apifinancedb_user
+      - POSTGRES_PASSWORD=vqZVTXI4pkrE6Txg4Ell6McKz7qJncj9
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U apifinancedb_user -d apifinancedb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - laravel
 

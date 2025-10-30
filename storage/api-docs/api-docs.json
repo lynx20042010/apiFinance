@@ -2,13 +2,17 @@
     "openapi": "3.0.0",
     "info": {
         "title": "API Finance - Gestion des Comptes",
-        "description": "API RESTful pour la gestion des comptes bancaires",
+        "description": "API RESTful pour la gestion des comptes bancaires et transactions financières avec authentification OAuth2",
         "version": "1.0.0"
     },
     "servers": [
         {
             "url": "http://localhost:8000/api",
             "description": "Serveur de développement"
+        },
+        {
+            "url": "https://apifinance.onrender.com/api",
+            "description": "Serveur de production"
         }
     ],
     "paths": {
@@ -47,7 +51,7 @@
                     {
                         "name": "type",
                         "in": "query",
-                        "description": "Type de compte",
+                        "description": "Type de compte (admin seulement)",
                         "required": false,
                         "schema": {
                             "type": "string",
@@ -61,7 +65,7 @@
                     {
                         "name": "statut",
                         "in": "query",
-                        "description": "Statut du compte",
+                        "description": "Statut du compte (admin seulement)",
                         "required": false,
                         "schema": {
                             "type": "string",
@@ -278,7 +282,12 @@
                             }
                         }
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "post": {
                 "tags": [
@@ -531,17 +540,16 @@
                     "Comptes"
                 ],
                 "summary": "Récupérer un compte spécifique",
-                "description": "Récupère les détails d'un compte spécifique. Admin peut voir tous les comptes, Client seulement les siens.",
+                "description": "Récupère les détails d'un compte spécifique par ID UUID ou numéro de compte. Admin peut voir tous les comptes, Client seulement les siens.",
                 "operationId": "getCompte",
                 "parameters": [
                     {
                         "name": "compteId",
                         "in": "path",
-                        "description": "ID du compte à récupérer",
+                        "description": "ID UUID ou numéro de compte à récupérer",
                         "required": true,
                         "schema": {
-                            "type": "string",
-                            "format": "uuid"
+                            "type": "string"
                         }
                     }
                 ],
@@ -738,7 +746,12 @@
                             }
                         }
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "put": {
                 "tags": [
@@ -751,11 +764,10 @@
                     {
                         "name": "compteId",
                         "in": "path",
-                        "description": "ID du compte à mettre à jour",
+                        "description": "ID UUID ou numéro de compte à mettre à jour",
                         "required": true,
                         "schema": {
-                            "type": "string",
-                            "format": "uuid"
+                            "type": "string"
                         }
                     }
                 ],
@@ -998,7 +1010,12 @@
                             }
                         }
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "delete": {
                 "tags": [
@@ -1011,11 +1028,10 @@
                     {
                         "name": "compteId",
                         "in": "path",
-                        "description": "ID du compte à supprimer",
+                        "description": "ID UUID ou numéro de compte à supprimer",
                         "required": true,
                         "schema": {
-                            "type": "string",
-                            "format": "uuid"
+                            "type": "string"
                         }
                     }
                 ],
@@ -1179,7 +1195,12 @@
                             }
                         }
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/v1/comptes/{compteId}/block": {
@@ -1194,11 +1215,10 @@
                     {
                         "name": "compteId",
                         "in": "path",
-                        "description": "ID du compte à bloquer",
+                        "description": "ID UUID ou numéro de compte à bloquer",
                         "required": true,
                         "schema": {
-                            "type": "string",
-                            "format": "uuid"
+                            "type": "string"
                         }
                     }
                 ],
@@ -1214,7 +1234,7 @@
                                         "example": "Suspicion d'activité frauduleuse"
                                     },
                                     "dureeBlocage": {
-                                        "description": "Durée en jours (optionnel)",
+                                        "description": "Durée en jours",
                                         "type": "integer",
                                         "maximum": 365,
                                         "minimum": 1,
@@ -1365,7 +1385,12 @@
                             }
                         }
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/v1/comptes/{compteId}/unblock": {
@@ -1373,18 +1398,17 @@
                 "tags": [
                     "Comptes"
                 ],
-                "summary": "Débloquer un compte épargne",
-                "description": "Débloque un compte bancaire de type épargne précédemment bloqué.",
+                "summary": "Débloquer manuellement un compte épargne (réservé aux administrateurs)",
+                "description": "Débloque manuellement un compte bancaire de type épargne précédemment bloqué. Cette opération est généralement automatique via job.",
                 "operationId": "unblockCompte",
                 "parameters": [
                     {
                         "name": "compteId",
                         "in": "path",
-                        "description": "ID du compte à débloquer",
+                        "description": "ID UUID ou numéro de compte à débloquer",
                         "required": true,
                         "schema": {
-                            "type": "string",
-                            "format": "uuid"
+                            "type": "string"
                         }
                     }
                 ],
@@ -1543,43 +1567,33 @@
                 }
             }
         },
-        "/v1/comptes/{compteId}/archive": {
+        "/v1/auth/login": {
             "post": {
                 "tags": [
-                    "Comptes"
+                    "Authentification"
                 ],
-                "summary": "Archiver un compte fermé",
-                "description": "Archive un compte bancaire fermé. Cette opération n'est autorisée que pour les comptes ayant le statut 'ferme'. L'archivage permet de conserver l'historique sans afficher le compte dans les listes actives.",
-                "operationId": "archiveCompte",
-                "parameters": [
-                    {
-                        "name": "compteId",
-                        "in": "path",
-                        "description": "ID du compte à archiver",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
+                "summary": "Connexion utilisateur",
+                "description": "Authentifie un utilisateur et retourne un token d'accès et un token de rafraîchissement",
+                "operationId": "login",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
                                 "properties": {
-                                    "motif": {
+                                    "email": {
                                         "type": "string",
-                                        "maxLength": 255,
-                                        "example": "Archivage suite à clôture définitive du compte"
+                                        "format": "email",
+                                        "example": "admin@example.com"
                                     },
-                                    "dureeArchivage": {
-                                        "description": "Durée d'archivage en jours (minimum 1 an, maximum 7 ans)",
-                                        "type": "integer",
-                                        "maximum": 2555,
-                                        "minimum": 365,
-                                        "example": 1825
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "admin123"
                                     }
                                 },
                                 "type": "object"
@@ -1589,7 +1603,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Compte archivé avec succès",
+                        "description": "Connexion réussie",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1600,40 +1614,52 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "example": "Compte archivé avec succès"
+                                            "example": "Connexion réussie"
                                         },
                                         "data": {
                                             "properties": {
-                                                "compteId": {
-                                                    "type": "string",
-                                                    "format": "uuid",
-                                                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                                                "user": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "string",
+                                                            "format": "uuid",
+                                                            "example": "550e8400-e29b-41d4-a716-446655440000"
+                                                        },
+                                                        "name": {
+                                                            "type": "string",
+                                                            "example": "Admin User"
+                                                        },
+                                                        "email": {
+                                                            "type": "string",
+                                                            "format": "email",
+                                                            "example": "admin@example.com"
+                                                        },
+                                                        "role": {
+                                                            "type": "string",
+                                                            "enum": [
+                                                                "admin",
+                                                                "client"
+                                                            ],
+                                                            "example": "admin"
+                                                        }
+                                                    },
+                                                    "type": "object"
                                                 },
-                                                "numeroCompte": {
+                                                "access_token": {
                                                     "type": "string",
-                                                    "example": "C00123456"
+                                                    "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."
                                                 },
-                                                "type": {
+                                                "refresh_token": {
                                                     "type": "string",
-                                                    "example": "courant"
+                                                    "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."
                                                 },
-                                                "statut": {
+                                                "token_type": {
                                                     "type": "string",
-                                                    "example": "archive"
+                                                    "example": "Bearer"
                                                 },
-                                                "motifArchivage": {
-                                                    "type": "string",
-                                                    "example": "Archivage suite à clôture définitive du compte"
-                                                },
-                                                "dateArchivage": {
-                                                    "type": "string",
-                                                    "format": "date-time",
-                                                    "example": "2023-06-10T14:30:00Z"
-                                                },
-                                                "dateFinArchivage": {
-                                                    "type": "string",
-                                                    "format": "date-time",
-                                                    "example": "2028-06-10T14:30:00Z"
+                                                "expires_in": {
+                                                    "type": "integer",
+                                                    "example": 3600
                                                 }
                                             },
                                             "type": "object"
@@ -1644,8 +1670,8 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Opération non autorisée pour ce type de compte",
+                    "401": {
+                        "description": "Identifiants invalides",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1658,69 +1684,11 @@
                                             "properties": {
                                                 "code": {
                                                     "type": "string",
-                                                    "example": "OPERATION_NOT_ALLOWED"
+                                                    "example": "INVALID_CREDENTIALS"
                                                 },
                                                 "message": {
                                                     "type": "string",
-                                                    "example": "L'archivage n'est autorisé que pour les comptes fermés"
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Compte non trouvé",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": false
-                                        },
-                                        "error": {
-                                            "properties": {
-                                                "code": {
-                                                    "type": "string",
-                                                    "example": "COMPTE_NOT_FOUND"
-                                                },
-                                                "message": {
-                                                    "type": "string",
-                                                    "example": "Le compte avec l'ID spécifié n'existe pas"
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "409": {
-                        "description": "Archivage impossible",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": false
-                                        },
-                                        "error": {
-                                            "properties": {
-                                                "code": {
-                                                    "type": "string",
-                                                    "example": "ARCHIVE_NOT_ALLOWED"
-                                                },
-                                                "message": {
-                                                    "type": "string",
-                                                    "example": "Le compte ne peut pas être archivé car il n'est pas fermé"
+                                                    "example": "Email ou mot de passe incorrect"
                                                 }
                                             },
                                             "type": "object"
@@ -1734,46 +1702,17 @@
                 }
             }
         },
-        "/v1/comptes/{compteId}/unarchive": {
+        "/v1/auth/refresh": {
             "post": {
                 "tags": [
-                    "Comptes"
+                    "Authentification"
                 ],
-                "summary": "Désarchiver un compte",
-                "description": "Désarchive un compte bancaire précédemment archivé, le remettant dans son état antérieur.",
-                "operationId": "unarchiveCompte",
-                "parameters": [
-                    {
-                        "name": "compteId",
-                        "in": "path",
-                        "description": "ID du compte à désarchiver",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "motif": {
-                                        "type": "string",
-                                        "maxLength": 255,
-                                        "example": "Désarchivage suite à demande du client"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
+                "summary": "Rafraîchir le token d'accès",
+                "description": "Génère un nouveau token d'accès en utilisant le token de rafraîchissement",
+                "operationId": "refresh",
                 "responses": {
                     "200": {
-                        "description": "Compte désarchivé avec succès",
+                        "description": "Token rafraîchi avec succès",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1784,31 +1723,21 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "example": "Compte désarchivé avec succès"
+                                            "example": "Token rafraîchi"
                                         },
                                         "data": {
                                             "properties": {
-                                                "compteId": {
+                                                "access_token": {
                                                     "type": "string",
-                                                    "format": "uuid",
-                                                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                                                    "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."
                                                 },
-                                                "numeroCompte": {
+                                                "token_type": {
                                                     "type": "string",
-                                                    "example": "C00123456"
+                                                    "example": "Bearer"
                                                 },
-                                                "type": {
-                                                    "type": "string",
-                                                    "example": "courant"
-                                                },
-                                                "statut": {
-                                                    "type": "string",
-                                                    "example": "ferme"
-                                                },
-                                                "dateDesarchivage": {
-                                                    "type": "string",
-                                                    "format": "date-time",
-                                                    "example": "2023-06-10T14:30:00Z"
+                                                "expires_in": {
+                                                    "type": "integer",
+                                                    "example": 3600
                                                 }
                                             },
                                             "type": "object"
@@ -1819,8 +1748,8 @@
                             }
                         }
                     },
-                    "404": {
-                        "description": "Compte non trouvé",
+                    "401": {
+                        "description": "Token invalide",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1833,11 +1762,230 @@
                                             "properties": {
                                                 "code": {
                                                     "type": "string",
-                                                    "example": "COMPTE_NOT_FOUND"
+                                                    "example": "INVALID_TOKEN"
                                                 },
                                                 "message": {
                                                     "type": "string",
-                                                    "example": "Le compte avec l'ID spécifié n'existe pas"
+                                                    "example": "Token de rafraîchissement invalide"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/v1/auth/logout": {
+            "post": {
+                "tags": [
+                    "Authentification"
+                ],
+                "summary": "Déconnexion",
+                "description": "Invalide le token d'accès actuel",
+                "operationId": "logout",
+                "responses": {
+                    "200": {
+                        "description": "Déconnexion réussie",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Déconnexion réussie"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token invalide",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "error": {
+                                            "properties": {
+                                                "code": {
+                                                    "type": "string",
+                                                    "example": "INVALID_TOKEN"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Token invalide"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/v1/auth/register": {
+            "post": {
+                "tags": [
+                    "Authentification"
+                ],
+                "summary": "Inscription d'un nouvel utilisateur",
+                "description": "Crée un nouveau compte utilisateur (admin ou client)",
+                "operationId": "register",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "password",
+                                    "role"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "John Doe"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "john@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password123"
+                                    },
+                                    "role": {
+                                        "type": "string",
+                                        "enum": [
+                                            "admin",
+                                            "client"
+                                        ],
+                                        "example": "client"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Utilisateur créé avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Utilisateur créé avec succès"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "user": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "string",
+                                                            "format": "uuid",
+                                                            "example": "550e8400-e29b-41d4-a716-446655440000"
+                                                        },
+                                                        "name": {
+                                                            "type": "string",
+                                                            "example": "John Doe"
+                                                        },
+                                                        "email": {
+                                                            "type": "string",
+                                                            "format": "email",
+                                                            "example": "john@example.com"
+                                                        },
+                                                        "role": {
+                                                            "type": "string",
+                                                            "enum": [
+                                                                "admin",
+                                                                "client"
+                                                            ],
+                                                            "example": "client"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "access_token": {
+                                                    "type": "string",
+                                                    "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."
+                                                },
+                                                "token_type": {
+                                                    "type": "string",
+                                                    "example": "Bearer"
+                                                },
+                                                "expires_in": {
+                                                    "type": "integer",
+                                                    "example": 3600
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Données de validation invalides",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "error": {
+                                            "properties": {
+                                                "code": {
+                                                    "type": "string",
+                                                    "example": "VALIDATION_ERROR"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Les données fournies sont invalides"
+                                                },
+                                                "details": {
+                                                    "type": "object"
                                                 }
                                             },
                                             "type": "object"
@@ -1849,7 +1997,7 @@
                         }
                     },
                     "409": {
-                        "description": "Désarchivage impossible",
+                        "description": "Email déjà utilisé",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1862,11 +2010,11 @@
                                             "properties": {
                                                 "code": {
                                                     "type": "string",
-                                                    "example": "UNARCHIVE_NOT_ALLOWED"
+                                                    "example": "EMAIL_EXISTS"
                                                 },
                                                 "message": {
                                                     "type": "string",
-                                                    "example": "Le compte n'est pas archivé"
+                                                    "example": "Cet email est déjà utilisé"
                                                 }
                                             },
                                             "type": "object"
@@ -1879,9 +2027,88 @@
                     }
                 }
             }
+        },
+        "/v1/auth/me": {
+            "get": {
+                "tags": [
+                    "Authentification"
+                ],
+                "summary": "Informations de l'utilisateur connecté",
+                "description": "Retourne les informations de l'utilisateur actuellement authentifié",
+                "operationId": "me",
+                "responses": {
+                    "200": {
+                        "description": "Informations utilisateur récupérées",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "user": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "string",
+                                                            "format": "uuid",
+                                                            "example": "550e8400-e29b-41d4-a716-446655440000"
+                                                        },
+                                                        "name": {
+                                                            "type": "string",
+                                                            "example": "Admin User"
+                                                        },
+                                                        "email": {
+                                                            "type": "string",
+                                                            "format": "email",
+                                                            "example": "admin@example.com"
+                                                        },
+                                                        "role": {
+                                                            "type": "string",
+                                                            "enum": [
+                                                                "admin",
+                                                                "client"
+                                                            ],
+                                                            "example": "admin"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "description": "Token d'accès OAuth2 obtenu via /api/v1/auth/login",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
+            }
         }
     },
     "tags": [
+        {
+            "name": "Authentification",
+            "description": "Endpoints d'authentification et gestion des tokens"
+        },
         {
             "name": "Comptes",
             "description": "Comptes"

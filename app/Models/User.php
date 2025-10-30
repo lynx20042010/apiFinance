@@ -47,14 +47,14 @@ class User extends Authenticatable
     ];
 
     /**
-     * Indicate that the model's ID is not incrementing.
+     * Indicate that the model's ID is incrementing.
      */
-    public $incrementing = false;
+    public $incrementing = true;
 
     /**
      * The data type of the primary key.
      */
-    protected $keyType = 'string';
+    protected $keyType = 'int';
 
     /**
      * Relation avec le client
@@ -100,16 +100,17 @@ class User extends Authenticatable
     }
 
     /**
-     * Générer un UUID pour le nouvel utilisateur
+     * Générer un UUID pour le nouvel utilisateur si nécessaire
      */
     protected static function boot()
     {
         parent::boot();
 
-        static::creating(function ($user) {
-            if (empty($user->id)) {
-                $user->id = (string) \Illuminate\Support\Str::uuid();
-            }
-        });
+        // Uncomment if you want to use UUIDs instead of auto-incrementing IDs
+        // static::creating(function ($user) {
+        //     if (empty($user->id)) {
+        //         $user->id = (string) \Illuminate\Support\Str::uuid();
+        //     }
+        // });
     }
 }

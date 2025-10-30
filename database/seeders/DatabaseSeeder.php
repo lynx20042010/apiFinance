@@ -46,6 +46,7 @@ class DatabaseSeeder extends Seeder
 
         // Lancer les seeders spécifiques
         $this->call([
+            UserSeeder::class,
             ClientSeeder::class,
             CompteSeeder::class,
             TransactionSeeder::class,

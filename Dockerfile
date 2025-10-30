@@ -57,25 +57,36 @@ RUN printf "<VirtualHost *:80>\n\
 # Créer le script de démarrage
 RUN printf '#!/bin/bash\n\
 set -e\n\
-echo "Waiting for database..."\n\
-while ! pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USERNAME" >/dev/null 2>&1; do\n\
-    sleep 1\n\
-done\n\
-echo "Database is ready!"\n\
 \n\
+# Attendre que la base de données soit prête\n\
+if [ -n "$DB_HOST" ] && [ "$DB_HOST" != "db" ]; then\n\
+    echo "Using external database: $DB_HOST"\n\
+else\n\
+    echo "Waiting for local database..."\n\
+    while ! pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USERNAME" >/dev/null 2>&1; do\n\
+        sleep 1\n\
+    done\n\
+    echo "Local database is ready!"\n\
+fi\n\
+\n\
+# Générer la clé d'\''application si nécessaire\n\
 if [ -z "$APP_KEY" ] || [ "$APP_KEY" = "base64:" ]; then\n\
     echo "Generating application key..."\n\
     php artisan key:generate --force\n\
 fi\n\
 \n\
+# Exécuter les migrations si demandé\n\
 if [ "$RUN_MIGRATIONS" = "true" ]; then\n\
     echo "Running migrations..."\n\
-    php artisan migrate --force || true\n\
+    php artisan migrate --force || echo "Migration failed, continuing..."\n\
+    echo "Running seeders..."\n\
+    php artisan db:seed --force || echo "Seeding failed, continuing..."\n\
 fi\n\
 \n\
+# Générer la documentation Swagger\n\
 if [ -f artisan ]; then\n\
     echo "Generating Swagger documentation..."\n\
-    php artisan l5-swagger:generate || true\n\
+    php artisan l5-swagger:generate || echo "Swagger generation failed, continuing..."\n\
 fi\n\
 \n\
 echo "Starting Apache..."\n\
