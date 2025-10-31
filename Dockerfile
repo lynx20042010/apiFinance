@@ -52,6 +52,8 @@ RUN if [ ! -f .env ]; then cp .env.example .env; fi && php artisan key:generate 
 
 # Create startup script
 RUN echo '#!/bin/bash\n\
+set -e\n\
+\n\
 # Wait for database to be ready\n\
 echo "Waiting for database to be ready..."\n\
 while ! pg_isready -h ${DB_HOST:-db} -p ${DB_PORT:-5432} -U ${DB_USERNAME:-api_user} > /dev/null 2>&1; do\n\
@@ -100,4 +102,4 @@ RUN chown -R www-data:www-data /var/www \
 
 # Expose port 9000 and start php-fpm server
 EXPOSE 9000
-CMD ["/usr/local/bin/start.sh", "php-fpm"]
+CMD ["php-fpm"]
