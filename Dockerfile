@@ -31,16 +31,16 @@ WORKDIR /var/www
 # Copy composer files and artisan for scripts
 COPY composer.json composer.lock artisan ./
 
-# Install PHP dependencies (without dev dependencies for production)
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
-
 # Copy existing application directory contents
 COPY . /var/www/html
 
 # Set working directory to Apache root
 WORKDIR /var/www/html
 
-# Run composer scripts now that all files are available
+# Install PHP dependencies (without dev dependencies for production)
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
+
+# Run composer dump-autoload
 RUN composer dump-autoload --optimize --no-interaction
 
 # Copy existing application directory permissions
