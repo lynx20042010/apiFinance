@@ -54,6 +54,8 @@ services:
       # --- CUSTOM SETTINGS ---
       - key: RUN_MIGRATIONS
         value: true
+      - key: SEED_DB
+        value: true
 
 databases:
   - name: api-finance-db
