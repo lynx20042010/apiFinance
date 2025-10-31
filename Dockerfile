@@ -45,7 +45,7 @@ RUN if [ -f package.json ]; then npm install && npm run build; else echo "No pac
 RUN if [ ! -f .env ]; then cp .env.example .env; fi && php artisan key:generate --no-interaction
 
 # Copy entrypoint script
-COPY docker-entrypoint.sh /usr/local/bin/
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Set permissions
