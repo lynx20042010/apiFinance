@@ -1,6 +1,6 @@
 FROM php:8.3-fpm-alpine
 
- 
+# Installer dépendances système
 RUN apk add --no-cache \
     git \
     curl \
@@ -12,48 +12,47 @@ RUN apk add --no-cache \
     postgresql-dev \
     libzip-dev \
     nodejs \
-    npm
+    npm \
+    dos2unix
 
- 
+# Installer Redis et extensions PHP
 RUN apk add --no-cache pcre-dev $PHPIZE_DEPS \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && apk del pcre-dev $PHPIZE_DEPS
 
-# Install PHP extensions
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip pdo_pgsql
 
-# Get latest Composer
+# Installer Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Set working directory
+# Dossier de travail
 WORKDIR /var/www
 
-# Copy existing application directory contents
-COPY . /var/www
+# Copier les fichiers de l’application
+COPY --chown=www-data:www-data . .
 
-# Copy existing application directory permissions
-COPY --chown=www-data:www-data . /var/www
+# Convertir le script entrypoint au format Unix
+RUN dos2unix docker-entrypoint.sh
 
-# Install PHP dependencies
+# Copier le script d’entrée dans un emplacement global
+RUN mv docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh \
+    && chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Installer dépendances PHP et Node
 RUN composer install --no-dev --optimize-autoloader
 
-# Install Node.js dependencies and build assets (only if package.json exists)
 RUN if [ -f package.json ]; then npm install && npm run build; else echo "No package.json found, skipping npm build"; fi
 
-# Generate application key if not exists
+# Générer la clé d’application si absente
 RUN if [ ! -f .env ]; then cp .env.example .env; fi && php artisan key:generate --no-interaction
 
-# Copy entrypoint script
-COPY docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
-
-# Set permissions
+# Réglages de permissions
 RUN chown -R www-data:www-data /var/www \
     && chmod -R 755 /var/www/storage \
     && chmod -R 755 /var/www/bootstrap/cache
 
-# Expose port 9000 and start php-fpm server
+# Exposer le port et lancer PHP-FPM
 EXPOSE 9000
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["php-fpm"]
