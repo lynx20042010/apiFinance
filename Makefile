@@ -7,62 +7,62 @@ help: ## Show this help message
 
 # Development commands
 build: ## Build the Docker images
-	docker-compose build --no-cache
+	docker compose build --no-cache
 
 up: ## Start the Docker containers
-	docker-compose up -d
+	docker compose up -d
 
 down: ## Stop the Docker containers
-	docker-compose down
+	docker compose down
 
 restart: ## Restart the Docker containers
-	docker-compose restart
+	docker compose restart
 
 logs: ## Show logs from all containers
-	docker-compose logs -f
+	docker compose logs -f
 
 shell: ## Access the app container shell
-	docker-compose exec app sh
+	docker compose exec app sh
 
 db-shell: ## Access the database shell
-	docker-compose exec db psql -U api_user -d api_finance
+	docker compose exec db psql -U api_user -d api_finance
 
 # Production commands
 build-prod: ## Build production Docker images
-	docker-compose -f docker-compose.prod.yml build --no-cache
+	docker compose -f docker-compose.prod.yml build --no-cache
 
 up-prod: ## Start production containers
-	docker-compose -f docker-compose.prod.yml up -d
+	docker compose -f docker-compose.prod.yml up -d
 
 down-prod: ## Stop production containers
-	docker-compose -f docker-compose.prod.yml down
+	docker compose -f docker-compose.prod.yml down
 
 # Testing and maintenance
 test: ## Run PHP tests
-	docker-compose exec app php artisan test
+	docker compose exec app php artisan test
 
 migrate: ## Run database migrations
-	docker-compose exec app php artisan migrate
+	docker compose exec app php artisan migrate
 
 seed: ## Seed the database
-	docker-compose exec app php artisan db:seed
+	docker compose exec app php artisan db:seed
 
 fresh: ## Refresh database with seeders
-	docker-compose exec app php artisan migrate:fresh --seed
+	docker compose exec app php artisan migrate:fresh --seed
 
 cache-clear: ## Clear all Laravel caches
-	docker-compose exec app php artisan cache:clear
-	docker-compose exec app php artisan config:clear
-	docker-compose exec app php artisan route:clear
-	docker-compose exec app php artisan view:clear
+	docker compose exec app php artisan cache:clear
+	docker compose exec app php artisan config:clear
+	docker compose exec app php artisan route:clear
+	docker compose exec app php artisan view:clear
 
 # Cleanup
 clean: ## Remove all containers, volumes, and images
-	docker-compose down -v --rmi all
+	docker compose down -v --rmi all
 	docker system prune -f
 
 clean-prod: ## Remove production containers and volumes
-	docker-compose -f docker-compose.prod.yml down -v --rmi all
+	docker compose -f docker-compose.prod.yml down -v --rmi all
 
 # Quick setup for development
 setup: build up migrate seed ## Full development setup

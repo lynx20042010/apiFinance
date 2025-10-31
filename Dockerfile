@@ -1,6 +1,6 @@
-FROM php:8.2-fpm-alpine
+FROM php:8.3-fpm-alpine
 
-# Install system dependencies
+ 
 RUN apk add --no-cache \
     git \
     curl \
@@ -14,7 +14,7 @@ RUN apk add --no-cache \
     nodejs \
     npm
 
-# Clear cache
+ 
 RUN apk add --no-cache pcre-dev $PHPIZE_DEPS \
     && pecl install redis \
     && docker-php-ext-enable redis \
@@ -38,11 +38,11 @@ COPY --chown=www-data:www-data . /var/www
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Install Node.js dependencies and build assets
-RUN npm install && npm run build
+# Install Node.js dependencies and build assets (only if package.json exists)
+RUN if [ -f package.json ]; then npm install && npm run build; else echo "No package.json found, skipping npm build"; fi
 
 # Generate application key if not exists
-RUN php artisan key:generate --no-interaction
+RUN if [ ! -f .env ]; then cp .env.example .env; fi && php artisan key:generate --no-interaction
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/
