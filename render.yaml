@@ -5,6 +5,7 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: ./
     plan: starter
+    healthCheckPath: /health
     envVars:
       - key: APP_NAME
         value: apiFinance

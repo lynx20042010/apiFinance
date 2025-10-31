@@ -1,27 +1,26 @@
-FROM php:8.3-fpm-alpine
+FROM php:8.3-apache
 
 # Install system dependencies
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y \
     git \
     curl \
     libpng-dev \
-    oniguruma-dev \
+    libonig-dev \
     libxml2-dev \
     zip \
     unzip \
-    postgresql-dev \
+    postgresql-client \
+    libpq-dev \
     libzip-dev \
     nodejs \
-    npm
+    npm \
+    && docker-php-ext-install pdo pdo_mysql pdo_pgsql mbstring exif pcntl bcmath gd zip \
+    && a2enmod rewrite \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Clear cache
-RUN apk add --no-cache pcre-dev $PHPIZE_DEPS \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
-    && apk del pcre-dev $PHPIZE_DEPS
-
-# Install PHP extensions
-RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip pdo_pgsql
+# Install Redis extension
+RUN pecl install redis && docker-php-ext-enable redis
 
 # Get latest Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -36,13 +35,16 @@ COPY composer.json composer.lock artisan ./
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
 # Copy existing application directory contents
-COPY . /var/www
+COPY . /var/www/html
+
+# Set working directory to Apache root
+WORKDIR /var/www/html
 
 # Run composer scripts now that all files are available
 RUN composer run-script post-autoload-dump --no-interaction
 
 # Copy existing application directory permissions
-COPY --chown=www-data:www-data . /var/www
+COPY --chown=www-data:www-data . /var/www/html
 
 # Install Node.js dependencies and build assets (only if package.json exists)
 RUN if [ -f package.json ]; then npm install && npm run build; else echo "No package.json found, skipping npm build"; fi
@@ -95,11 +97,28 @@ chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache\n\
 echo "Starting application..."\n\
 exec "$@"' > /usr/local/bin/start.sh && chmod +x /usr/local/bin/start.sh
 
-# Set permissions
-RUN chown -R www-data:www-data /var/www \
-    && chmod -R 755 /var/www/storage \
-    && chmod -R 755 /var/www/bootstrap/cache
+# Configure Apache for Laravel
+RUN echo '<VirtualHost *:80>\n\
+    DocumentRoot /var/www/html/public\n\
+    <Directory /var/www/html/public>\n\
+        AllowOverride All\n\
+        Require all granted\n\
+    </Directory>\n\
+    ErrorLog ${APACHE_LOG_DIR}/error.log\n\
+    CustomLog ${APACHE_LOG_DIR}/access.log combined\n\
+</VirtualHost>' > /etc/apache2/sites-available/000-default.conf
 
-# Expose port 9000 and start php-fpm server
-EXPOSE 9000
-CMD ["php-fpm"]
+# Set proper permissions
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html/storage \
+    && chmod -R 755 /var/www/html/bootstrap/cache
+
+# Expose port 80 for Apache
+EXPOSE 80
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost/health || exit 1
+
+# Start Apache
+CMD ["apache2-foreground"]

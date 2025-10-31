@@ -16,3 +16,15 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return ['Laravel' => app()->version()];
 });
+
+// Health check endpoint for Docker and monitoring
+Route::get('/health', function () {
+    return response()->json([
+        'status' => 'healthy',
+        'timestamp' => now()->toISOString(),
+        'services' => [
+            'database' => \DB::connection()->getPdo() ? 'connected' : 'disconnected',
+            'cache' => \Cache::store()->getStore() ? 'connected' : 'disconnected'
+        ]
+    ]);
+});
