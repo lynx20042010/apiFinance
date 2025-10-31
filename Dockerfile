@@ -41,7 +41,7 @@ COPY . /var/www/html
 WORKDIR /var/www/html
 
 # Run composer scripts now that all files are available
-RUN composer run-script post-autoload-dump --no-interaction
+RUN composer dump-autoload --optimize --no-interaction
 
 # Copy existing application directory permissions
 COPY --chown=www-data:www-data . /var/www/html
