@@ -11,20 +11,20 @@ class Compte extends Model
 {
     use HasFactory;
 
-    protected $connection = 'neon';
+    protected $connection = 'render';
 
     /**
      * Get the appropriate connection based on account status
      */
     public function getConnectionName()
     {
-        // Use Neon only for blocked accounts
+        // Use Neon for blocked accounts, Render for others
         if ($this->statut === 'bloque') {
             return 'neon';
         }
 
-        // Use default connection for all other accounts
-        return config('database.default');
+        // Use render connection for all other accounts
+        return 'render';
     }
 
     protected $fillable = [

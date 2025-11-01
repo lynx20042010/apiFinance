@@ -93,6 +93,21 @@ return [
             'sslmode' => 'require',
         ],
 
+        'neon' => [
+            'driver' => 'pgsql',
+            'url' => env('NEON_DATABASE_URL', 'postgresql://neondb_owner:npg_2iAkDpuRlF8f@ep-sweet-pond-ahr7xobd-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'),
+            'host' => env('NEON_DB_HOST', 'ep-sweet-pond-ahr7xobd-pooler.c-3.us-east-1.aws.neon.tech'),
+            'port' => env('NEON_DB_PORT', '5432'),
+            'database' => env('NEON_DB_DATABASE', 'neondb'),
+            'username' => env('NEON_DB_USERNAME', 'neondb_owner'),
+            'password' => env('NEON_DB_PASSWORD', 'npg_2iAkDpuRlF8f'),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => 'require',
+        ],
+
         'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DATABASE_URL'),

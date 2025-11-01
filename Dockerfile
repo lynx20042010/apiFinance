@@ -56,23 +56,44 @@ RUN if [ ! -f .env ]; then cp .env.example .env; fi && php artisan key:generate 
 RUN echo '#!/bin/bash\n\
 set -e\n\
 \n\
-# Wait for database to be ready\n\
-echo "Waiting for database to be ready..."\n\
+# Wait for databases to be ready\n\
+echo "Waiting for Render database to be ready..."\n\
 while ! pg_isready -h ${DB_HOST:-db} -p ${DB_PORT:-5432} -U ${DB_USERNAME:-api_user} > /dev/null 2>&1; do\n\
-  echo "Database is unavailable - sleeping"\n\
+  echo "Render database is unavailable - sleeping"\n\
   sleep 2\n\
 done\n\
 \n\
-echo "Database is ready!"\n\
+echo "Render database is ready!"\n\
 \n\
-# Run migrations\n\
-echo "Running database migrations..."\n\
+# Wait for Neon database if configured\n\
+if [ -n "$NEON_DB_HOST" ]; then\n\
+  echo "Waiting for Neon database to be ready..."\n\
+  while ! pg_isready -h ${NEON_DB_HOST} -p ${NEON_DB_PORT:-5432} -U ${NEON_DB_USERNAME} > /dev/null 2>&1; do\n\
+    echo "Neon database is unavailable - sleeping"\n\
+    sleep 2\n\
+  done\n\
+  echo "Neon database is ready!"\n\
+fi\n\
+\n\
+# Run migrations for Render database\n\
+echo "Running database migrations for Render..."\n\
 php artisan migrate --force\n\
 \n\
-# Seed the database if SEED_DB is set to true\n\
+# Run migrations for Neon database if configured\n\
+if [ -n "$NEON_DB_HOST" ]; then\n\
+  echo "Running database migrations for Neon..."\n\
+  php artisan migrate --force --database=neon\n\
+fi\n\
+\n\
+# Seed the databases if SEED_DB is set to true\n\
 if [ "$SEED_DB" = "true" ]; then\n\
-    echo "Seeding database..."\n\
+    echo "Seeding Render database..."\n\
     php artisan db:seed --force\n\
+    \n\
+    if [ -n "$NEON_DB_HOST" ]; then\n\
+        echo "Seeding Neon database..."\n\
+        php artisan db:seed --force --database=neon\n\
+    fi\n\
 fi\n\
 \n\
 # Generate application key if not exists\n\
@@ -83,7 +104,11 @@ fi\n\
 \n\
 # Generate Swagger documentation\n\
 echo "Generating API documentation..."\n\
-php artisan l5-swagger:generate\n\
+if php artisan l5-swagger:generate 2>/dev/null; then\n\
+    echo "Swagger documentation generated successfully"\n\
+else\n\
+    echo "Warning: Swagger generation failed, but continuing..."\n\
+fi\n\
 \n\
 # Clear and cache config\n\
 echo "Caching configuration..."\n\
