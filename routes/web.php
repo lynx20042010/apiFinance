@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 /*
 |--------------------------------------------------------------------------
@@ -19,12 +21,42 @@ Route::get('/', function () {
 
 // Health check endpoint for Docker and monitoring
 Route::get('/health', function () {
-    return response()->json([
-        'status' => 'healthy',
-        'timestamp' => now()->toISOString(),
-        'services' => [
-            'database' => \DB::connection()->getPdo() ? 'connected' : 'disconnected',
-            'cache' => \Cache::store()->getStore() ? 'connected' : 'disconnected'
-        ]
-    ]);
+    try {
+        $databaseStatus = 'disconnected';
+        $neonStatus = 'not_configured';
+
+        try {
+            DB::connection('render')->getPdo();
+            $databaseStatus = 'connected';
+        } catch (\Exception $e) {
+            $databaseStatus = 'error: ' . $e->getMessage();
+        }
+
+        if (env('RENDER2_DB_HOST')) {
+            try {
+                DB::connection('render2')->getPdo();
+                $render2Status = 'connected';
+            } catch (\Exception $e) {
+                $render2Status = 'error: ' . $e->getMessage();
+            }
+        } else {
+            $render2Status = 'not_configured';
+        }
+
+        return response()->json([
+            'status' => 'healthy',
+            'timestamp' => now()->toISOString(),
+            'services' => [
+                'render_database' => $databaseStatus,
+                'render2_database' => $render2Status,
+                'cache' => Cache::store()->getStore() ? 'connected' : 'disconnected'
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'unhealthy',
+            'error' => $e->getMessage(),
+            'timestamp' => now()->toISOString()
+        ], 500);
+    }
 });

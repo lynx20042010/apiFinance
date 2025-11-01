@@ -65,24 +65,24 @@ done\n\
 \n\
 echo "Render database is ready!"\n\
 \n\
-# Wait for Neon database if configured\n\
-if [ -n "$NEON_DB_HOST" ]; then\n\
-  echo "Waiting for Neon database to be ready..."\n\
-  while ! pg_isready -h ${NEON_DB_HOST} -p ${NEON_DB_PORT:-5432} -U ${NEON_DB_USERNAME} > /dev/null 2>&1; do\n\
-    echo "Neon database is unavailable - sleeping"\n\
+# Wait for Render2 database if configured\n\
+if [ -n "$RENDER2_DB_HOST" ]; then\n\
+  echo "Waiting for Render2 database to be ready..."\n\
+  while ! pg_isready -h ${RENDER2_DB_HOST} -p ${RENDER2_DB_PORT:-5432} -U ${RENDER2_DB_USERNAME} > /dev/null 2>&1; do\n\
+    echo "Render2 database is unavailable - sleeping"\n\
     sleep 2\n\
   done\n\
-  echo "Neon database is ready!"\n\
+  echo "Render2 database is ready!"\n\
 fi\n\
 \n\
 # Run migrations for Render database\n\
 echo "Running database migrations for Render..."\n\
 php artisan migrate --force\n\
 \n\
-# Run migrations for Neon database if configured\n\
-if [ -n "$NEON_DB_HOST" ]; then\n\
-  echo "Running database migrations for Neon..."\n\
-  php artisan migrate --force --database=neon\n\
+# Run migrations for Render2 database if configured\n\
+if [ -n "$RENDER2_DB_HOST" ]; then\n\
+  echo "Running database migrations for Render2..."\n\
+  php artisan migrate --force --database=render2\n\
 fi\n\
 \n\
 # Seed the databases if SEED_DB is set to true\n\
@@ -90,9 +90,9 @@ if [ "$SEED_DB" = "true" ]; then\n\
     echo "Seeding Render database..."\n\
     php artisan db:seed --force\n\
     \n\
-    if [ -n "$NEON_DB_HOST" ]; then\n\
-        echo "Seeding Neon database..."\n\
-        php artisan db:seed --force --database=neon\n\
+    if [ -n "$RENDER2_DB_HOST" ]; then\n\
+        echo "Seeding Render2 database..."\n\
+        php artisan db:seed --force --database=render2\n\
     fi\n\
 fi\n\
 \n\

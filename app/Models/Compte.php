@@ -18,9 +18,9 @@ class Compte extends Model
      */
     public function getConnectionName()
     {
-        // Use Neon for blocked accounts, Render for others
+        // Use Render2 for blocked accounts, Render for others
         if ($this->statut === 'bloque') {
-            return 'neon';
+            return 'render2';
         }
 
         // Use render connection for all other accounts
