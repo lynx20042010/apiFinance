@@ -15,9 +15,19 @@ RUN apt-get update && apt-get install -y \
     nodejs \
     npm \
     && docker-php-ext-install pdo pdo_mysql pdo_pgsql mbstring exif pcntl bcmath gd zip \
-    && a2enmod rewrite \
+    && a2enmod rewrite headers \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Configure Apache
+RUN echo "ServerName apifinance.onrender.com" >> /etc/apache2/apache2.conf
+
+# Configure PHP for error reporting
+RUN echo "display_errors = On" >> /usr/local/etc/php/php.ini \
+    && echo "display_startup_errors = On" >> /usr/local/etc/php/php.ini \
+    && echo "error_reporting = E_ALL" >> /usr/local/etc/php/php.ini \
+    && echo "log_errors = On" >> /usr/local/etc/php/php.ini \
+    && echo "error_log = /var/log/apache2/php_errors.log" >> /usr/local/etc/php/php.ini
 
 # Install Redis extension
 RUN pecl install redis && docker-php-ext-enable redis
