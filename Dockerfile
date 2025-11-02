@@ -44,6 +44,9 @@ COPY composer.json composer.lock ./
 # Install PHP dependencies (without dev dependencies for production)
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
+# Copy artisan file for dump-autoload
+COPY artisan ./
+
 # Run composer dump-autoload
 RUN composer dump-autoload --optimize --no-interaction
 
