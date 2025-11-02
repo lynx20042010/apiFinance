@@ -10,28 +10,30 @@ Une API RESTful complète pour la gestion des comptes bancaires, clients et tran
 - ✅ Système de rôles (Admin/Client)
 - ✅ API RESTful avec documentation Swagger/OpenAPI
 - ✅ Architecture microservices prête pour la production
-- ✅ Support Docker complet
 - ✅ Cache Redis et files d'attente
 - ✅ Logs et monitoring
+- ✅ Support multi-bases de données (PostgreSQL)
 
 ## 🛠️ Technologies
 
 - **Framework**: Laravel 10
 - **Langage**: PHP 8.2
-- **Base de données**: PostgreSQL
+- **Base de données**: PostgreSQL (multi-bases de données)
 - **Cache/Queue**: Redis
-- **Serveur Web**: Nginx
-- **Conteneurisation**: Docker & Docker Compose
+- **Serveur Web**: Apache/Nginx
 - **Documentation**: Swagger/OpenAPI 3.0
 
 ## 📋 Prérequis
 
-- Docker & Docker Compose
-- Make (optionnel, pour utiliser les commandes du Makefile)
+- PHP 8.2 ou supérieur
+- Composer
+- PostgreSQL
+- Redis (optionnel, pour cache et queues)
+- Node.js & NPM (pour assets frontend si nécessaire)
 
 ## 🚀 Installation et Démarrage
 
-### Développement
+### Installation Locale
 
 1. **Cloner le projet**
    ```bash
@@ -39,39 +41,58 @@ Une API RESTful complète pour la gestion des comptes bancaires, clients et tran
    cd api-finance
    ```
 
-2. **Configuration**
+2. **Installer les dépendances PHP**
+   ```bash
+   composer install
+   ```
+
+3. **Configuration**
    ```bash
    cp .env.example .env
-   # Éditer .env avec vos paramètres
+   # Éditer .env avec vos paramètres de base de données
+   php artisan key:generate
    ```
 
-3. **Démarrage avec Docker**
+4. **Configuration de la base de données**
    ```bash
-   # Avec Make (recommandé)
-   make setup
-
-   # Ou manuellement
-   docker-compose build --no-cache
-   docker-compose up -d
-   docker-compose exec app php artisan migrate
-   docker-compose exec app php artisan db:seed
+   # Créer les bases de données PostgreSQL
+   # Modifier config/database.php selon vos besoins
+   php artisan migrate
+   php artisan db:seed
    ```
 
-4. **Accès à l'application**
+5. **Démarrage du serveur**
+   ```bash
+   php artisan serve
+   ```
+
+6. **Accès à l'application**
    - API: http://localhost:8000
    - Documentation Swagger: http://localhost:8000/api/documentation
 
+### Configuration Multi-Bases de Données
+
+Le projet supporte plusieurs connexions de base de données :
+
+```php
+// Dans config/database.php
+'connections' => [
+    'render2' => [ // Base principale
+        'host' => env('RENDER2_DB_HOST'),
+        'database' => env('RENDER2_DB_DATABASE'),
+        // ...
+    ],
+    'render3' => [ // Base secondaire (optionnelle)
+        'host' => env('RENDER3_DB_HOST'),
+        'database' => env('RENDER3_DB_DATABASE'),
+        // ...
+    ],
+]
+```
+
 ### Production
 
-```bash
-# Build et démarrage en production
-make build-prod
-make up-prod
-
-# Ou manuellement
-docker-compose -f docker-compose.prod.yml build --no-cache
-docker-compose -f docker-compose.prod.yml up -d
-```
+Pour le déploiement en production, configurez vos variables d'environnement et utilisez un serveur web comme Apache ou Nginx avec PHP-FPM.
 
 ## 📚 Documentation API
 
@@ -103,33 +124,31 @@ La documentation complète est disponible via Swagger UI :
 
 ## 🔧 Commandes Utiles
 
-### Avec Make
+### Commandes Laravel
 ```bash
-make help           # Liste des commandes disponibles
-make build          # Build des images Docker
-make up             # Démarrer les conteneurs
-make down           # Arrêter les conteneurs
-make logs           # Voir les logs
-make shell          # Accès shell du conteneur app
-make db-shell       # Accès shell PostgreSQL
-make test           # Exécuter les tests
-make migrate        # Exécuter les migrations
-make seed           # Seeder la base de données
-make cache-clear    # Vider les caches
-make clean          # Nettoyer complètement
-```
+# Migrations
+php artisan migrate                    # Exécuter les migrations
+php artisan migrate:rollback           # Annuler la dernière migration
+php artisan migrate:fresh              # Reset complet de la DB
 
-### Avec Docker Compose
-```bash
-# Développement
-docker-compose exec app php artisan migrate
-docker-compose exec app php artisan db:seed
-docker-compose exec app php artisan test
-docker-compose logs -f app
+# Seeders
+php artisan db:seed                    # Exécuter tous les seeders
+php artisan db:seed --class=UserSeeder # Seeder spécifique
 
-# Production
-docker-compose -f docker-compose.prod.yml exec app php artisan migrate
-docker-compose -f docker-compose.prod.yml logs -f
+# Cache
+php artisan cache:clear                # Vider le cache
+php artisan config:clear               # Vider la config
+php artisan route:clear                # Vider les routes
+php artisan view:clear                 # Vider les vues
+
+# Files d'attente (Queues)
+php artisan queue:work                 # Traiter les jobs en file d'attente
+
+# Tests
+php artisan test                       # Exécuter tous les tests
+
+# Documentation API
+php artisan l5-swagger:generate        # Générer la documentation Swagger
 ```
 
 ## 🧪 Tests
@@ -156,25 +175,25 @@ docker-compose exec app php artisan test --coverage
 ```
 api-finance/
 ├── app/                    # Code de l'application Laravel
-├── config/                 # Configuration Laravel
-├── database/               # Migrations et seeders
-├── docker/                 # Configuration Docker
-│   ├── nginx/             # Configuration Nginx
-│   └── php/               # Configuration PHP
-├── public/                # Assets publics
-├── resources/             # Views et assets
+│   ├── Models/            # Modèles Eloquent
+│   ├── Http/Controllers/  # Contrôleurs API
+│   ├── Jobs/             # Tâches en arrière-plan
+│   └── Providers/        # Service Providers
+├── config/                # Configuration Laravel
+├── database/              # Migrations et seeders
+├── public/                # Assets publics et index.php
+├── resources/             # Views et assets (optionnel)
 ├── routes/                # Définition des routes API
-├── storage/               # Fichiers temporaires et logs
+├── storage/               # Logs, cache, sessions
 ├── tests/                 # Tests unitaires et fonctionnels
-├── docker-compose.yml     # Configuration développement
-├── docker-compose.prod.yml # Configuration production
-├── Dockerfile            # Image Docker de l'application
-└── Makefile             # Commandes d'automatisation
+├── artisan               # Interface en ligne de commande Laravel
+├── composer.json         # Dépendances PHP
+└── README.md            # Cette documentation
 ```
 
 ## 🚀 Déploiement
 
-### Variables d'environnement requises
+### Variables d'environnement
 
 ```env
 APP_NAME="API Finance"
@@ -182,38 +201,70 @@ APP_ENV=production
 APP_KEY=base64:your-app-key
 APP_DEBUG=false
 
-# Base de données
-DB_CONNECTION=pgsql
-DB_HOST=db
-DB_DATABASE=api_finance
-DB_USERNAME=api_user
-DB_PASSWORD=your-secure-password
+# Base de données principale (render2)
+RENDER2_DB_HOST=your-postgres-host
+RENDER2_DB_DATABASE=your-database-name
+RENDER2_DB_USERNAME=your-username
+RENDER2_DB_PASSWORD=your-password
+RENDER2_DB_PORT=5432
 
-# Redis
-REDIS_HOST=redis
+# Base de données secondaire (optionnelle)
+RENDER3_DB_HOST=your-secondary-host
+RENDER3_DB_DATABASE=your-secondary-db
+RENDER3_DB_USERNAME=your-secondary-user
+RENDER3_DB_PASSWORD=your-secondary-password
+RENDER3_DB_PORT=5432
+
+# Redis (optionnel)
+REDIS_HOST=your-redis-host
 REDIS_PASSWORD=your-redis-password
+REDIS_PORT=6379
 
 # Cache et Queue
-CACHE_STORE=redis
-QUEUE_CONNECTION=redis
-SESSION_DRIVER=redis
+CACHE_STORE=file  # ou redis si disponible
+QUEUE_CONNECTION=sync  # ou redis si disponible
+SESSION_DRIVER=file  # ou redis si disponible
 ```
 
-### Commandes de déploiement
+### Déploiement sur un serveur
 
-```bash
-# Build de production
-docker-compose -f docker-compose.prod.yml build
+1. **Transférer les fichiers**
+   ```bash
+   git clone your-repo /var/www/api-finance
+   cd /var/www/api-finance
+   ```
 
-# Démarrage
-docker-compose -f docker-compose.prod.yml up -d
+2. **Installer les dépendances**
+   ```bash
+   composer install --no-dev --optimize-autoloader
+   ```
 
-# Migration de la base de données
-docker-compose -f docker-compose.prod.yml exec app php artisan migrate --force
+3. **Configuration**
+   ```bash
+   cp .env.example .env
+   # Éditer .env avec vos vraies valeurs
+   php artisan key:generate
+   ```
 
-# Génération de la documentation
-docker-compose -f docker-compose.prod.yml exec app php artisan l5-swagger:generate
-```
+4. **Base de données**
+   ```bash
+   php artisan migrate --force
+   php artisan db:seed
+   ```
+
+5. **Permissions**
+   ```bash
+   chown -R www-data:www-data /var/www/api-finance/storage
+   chown -R www-data:www-data /var/www/api-finance/bootstrap/cache
+   ```
+
+6. **Optimisation**
+   ```bash
+   php artisan config:cache
+   php artisan route:cache
+   php artisan view:cache
+   php artisan l5-swagger:generate
+   ```
 
 ## 📈 Monitoring
 
