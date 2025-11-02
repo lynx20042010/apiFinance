@@ -1,5 +1,10 @@
 <?php
 
+// Activer l'affichage des erreurs pour le debug
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
 
