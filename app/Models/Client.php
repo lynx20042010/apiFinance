@@ -11,7 +11,7 @@ class Client extends Model
 {
     use HasFactory;
 
-    protected $connection = 'render';
+    protected $connection = 'render2';
 
     protected $fillable = [
         'user_id',

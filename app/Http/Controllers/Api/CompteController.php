@@ -174,8 +174,14 @@ class CompteController extends Controller
 
         // Filtrage selon le rôle de l'utilisateur
         if ($user->admin) {
-            // Admin voit tous les comptes (sauf archivés)
-            $query->where('statut', '!=', 'archive');
+            // Admin voit par défaut les comptes actifs, mais peut filtrer via le paramètre statut
+            if (!$request->has('statut') || empty($request->statut)) {
+                $query->where('statut', 'actif');
+            }
+            // Exclure toujours les comptes archivés sauf si explicitement demandé
+            if (!$request->has('statut') || $request->statut !== 'archive') {
+                $query->where('statut', '!=', 'archive');
+            }
         } else {
             // Client ne voit que ses propres comptes actifs
             $query->where('client_id', $user->client->id)
@@ -269,13 +275,14 @@ class CompteController extends Controller
      *     @OA\RequestBody(
      *         required=true,
      *             @OA\JsonContent(
-     *             required={"type", "soldeInitial", "devise", "client"},
+     *             required={"type", "soldeInitial", "devise"},
      *             @OA\Property(property="type", type="string", enum={"cheque", "courant", "epargne"}, example="cheque"),
      *             @OA\Property(property="soldeInitial", type="number", format="float", minimum=10000, example=500000),
      *             @OA\Property(property="devise", type="string", enum={"XAF", "EUR", "USD", "CAD", "GBP"}, example="XAF"),
      *             @OA\Property(
      *                 property="client",
      *                 type="object",
+     *                 description="Requis uniquement pour les administrateurs. Les clients utilisent automatiquement leurs propres informations.",
      *                 @OA\Property(property="id", type="string", format="uuid", nullable=true, example="8f457618-ac42-488b-a2b3-d7d00257ae05"),
      *                 @OA\Property(property="titulaire", type="string", example="Hawa BB Wane"),
      *                 @OA\Property(property="email", type="string", format="email", example="cheikh.sy@example.com"),
@@ -305,6 +312,14 @@ class CompteController extends Controller
      *                     @OA\Property(property="derniereModification", type="string", format="date-time", example="2025-10-19T10:30:00Z"),
      *                     @OA\Property(property="version", type="integer", example=1)
      *                 )
+     *             ),
+     *             @OA\Property(
+     *                 property="credentials",
+     *                 type="object",
+     *                 @OA\Property(property="email", type="string", format="email", example="cheikh.sy@example.com"),
+     *                 @OA\Property(property="password", type="string", example="TempPass123"),
+     *                 @OA\Property(property="numero_compte_client", type="string", example="CLT2024000001"),
+     *                 @OA\Property(property="code_authentification", type="string", example="123456")
      *             )
      *         )
      *     ),
@@ -346,16 +361,52 @@ class CompteController extends Controller
             // Les données sont déjà validées par StoreCompteRequest
             $validated = $request->validated();
 
-            // Créer ou récupérer le client
+            $user = Auth::guard('api')->user();
+
+            // Si c'est un client qui crée un compte, utiliser ses propres informations
+            if (!$user->admin) {
+                $client = $user->client;
+
+                // Vérifier que le client existe
+                if (!$client) {
+                    return response()->json([
+                        'success' => false,
+                        'error' => [
+                            'code' => 'CLIENT_NOT_FOUND',
+                            'message' => 'Informations client introuvables'
+                        ]
+                    ], 404);
+                }
+
+                // Créer le compte pour le client connecté
+                $compte = $this->createCompte($client, $validated);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Compte créé avec succès',
+                    'data' => CompteResource::make($compte)
+                ], 201);
+            }
+
+            // Si c'est un admin, créer ou récupérer le client comme avant
             $client = $this->createOrFindClient($validated['client']);
 
             // Créer le compte
             $compte = $this->createCompte($client, $validated);
 
+            // Récupérer le mot de passe généré depuis les métadonnées du client
+            $generatedPassword = $client->metadata['mot_de_passe_temporaire'] ?? null;
+
             return response()->json([
                 'success' => true,
                 'message' => 'Compte créé avec succès',
-                'data' => CompteResource::make($compte)
+                'data' => CompteResource::make($compte),
+                'credentials' => [
+                    'email' => $client->user->email,
+                    'password' => $generatedPassword,
+                    'numero_compte_client' => $client->numeroCompte,
+                    'code_authentification' => $client->metadata['code_authentification'] ?? null
+                ]
             ], 201);
 
         } catch (\Illuminate\Database\QueryException $e) {
@@ -1031,165 +1082,130 @@ class CompteController extends Controller
     }
 
     /**
-      * @OA\Post(
-      *     path="/v1/comptes/{compteId}/unblock",
-      *     summary="Débloquer manuellement un compte épargne (réservé aux administrateurs)",
-      *     description="Débloque manuellement un compte bancaire de type épargne précédemment bloqué. Cette opération est généralement automatique via job.",
-      *     operationId="unblockCompte",
-      *     tags={"Comptes"},
-      *     @OA\Parameter(
-      *         name="compteId",
-      *         in="path",
-      *         description="ID UUID ou numéro de compte à débloquer",
-      *         required=true,
-      *         @OA\Schema(type="string")
-      *     ),
-      *     @OA\RequestBody(
-      *         required=true,
-      *         @OA\JsonContent(
-      *             @OA\Property(property="motif", type="string", maxLength=255, example="Blocage levé suite à vérification")
-      *         )
-      *     ),
-      *     @OA\Response(
-      *         response=200,
-      *         description="Compte débloqué avec succès",
-      *         @OA\JsonContent(
-      *             @OA\Property(property="success", type="boolean", example=true),
-      *             @OA\Property(property="message", type="string", example="Compte débloqué avec succès"),
-      *             @OA\Property(
-      *                 property="data",
-      *                 type="object",
-      *                 @OA\Property(property="compteId", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
-      *                 @OA\Property(property="numeroCompte", type="string", example="CPT2025000001"),
-      *                 @OA\Property(property="type", type="string", example="epargne"),
-      *                 @OA\Property(property="statut", type="string", example="actif"),
-      *                 @OA\Property(property="dateDeblocage", type="string", format="date-time", example="2023-06-10T14:30:00Z")
-      *             )
-      *         )
-      *     ),
-      *     @OA\Response(
-      *         response=400,
-      *         description="Opération non autorisée pour ce type de compte",
-      *         @OA\JsonContent(
-      *             @OA\Property(property="success", type="boolean", example=false),
-      *             @OA\Property(
-      *                 property="error",
-      *                 type="object",
-      *                 @OA\Property(property="code", type="string", example="OPERATION_NOT_ALLOWED"),
-      *                 @OA\Property(property="message", type="string", example="Le déblocage n'est autorisé que pour les comptes épargne")
-      *             )
-      *         )
-      *     ),
-      *     @OA\Response(
-      *         response=404,
-      *         description="Compte non trouvé",
-      *         @OA\JsonContent(
-      *             @OA\Property(property="success", type="boolean", example=false),
-      *             @OA\Property(
-      *                 property="error",
-      *                 type="object",
-      *                 @OA\Property(property="code", type="string", example="COMPTE_NOT_FOUND"),
-      *                 @OA\Property(property="message", type="string", example="Le compte avec l'ID spécifié n'existe pas")
-      *             )
-      *         )
-      *     ),
-      *     @OA\Response(
-      *         response=409,
-      *         description="Compte non bloqué",
-      *         @OA\JsonContent(
-      *             @OA\Property(property="success", type="boolean", example=false),
-      *             @OA\Property(
-      *                 property="error",
-      *                 type="object",
-      *                 @OA\Property(property="code", type="string", example="COMPTE_NOT_BLOCKED"),
-      *                 @OA\Property(property="message", type="string", example="Le compte n'est pas bloqué")
-      *             )
-      *         )
-      *     )
-      * )
-      */
-    public function unblock(Request $request, string $compteId): JsonResponse
+     * @OA\Get(
+     *     path="/v1/comptes/bloques",
+     *     summary="Lister tous les comptes bloqués",
+     *     description="Récupère la liste de tous les comptes actuellement bloqués. Réservé aux administrateurs.",
+     *     operationId="getBlockedAccounts",
+     *     tags={"Comptes"},
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Numéro de page",
+     *         required=false,
+     *         @OA\Schema(type="integer", minimum=1, default=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="limit",
+     *         in="query",
+     *         description="Nombre d'éléments par page",
+     *         required=false,
+     *         @OA\Schema(type="integer", minimum=1, maximum=100, default=10)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Liste des comptes bloqués récupérée avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     @OA\Property(property="id", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
+     *                     @OA\Property(property="numeroCompte", type="string", example="C00123456"),
+     *                     @OA\Property(property="titulaire", type="string", example="Amadou Diallo"),
+     *                     @OA\Property(property="type", type="string", enum={"cheque", "courant", "epargne"}, example="epargne"),
+     *                     @OA\Property(property="solde", type="number", format="float", example=1250000),
+     *                     @OA\Property(property="devise", type="string", example="XAF"),
+     *                     @OA\Property(property="dateCreation", type="string", format="date-time", example="2023-03-15T00:00:00Z"),
+     *                     @OA\Property(property="statut", type="string", example="bloque"),
+     *                     @OA\Property(property="motifBlocage", type="string", example="Inactivité de 30+ jours"),
+     *                     @OA\Property(property="dateBlocage", type="string", format="date-time", example="2023-06-10T14:30:00Z"),
+     *                     @OA\Property(property="metadata", type="object",
+     *                         @OA\Property(property="derniereModification", type="string", format="date-time", example="2023-06-10T14:30:00Z"),
+     *                         @OA\Property(property="version", type="integer", example=1)
+     *                     )
+     *                 )
+     *             ),
+     *             @OA\Property(
+     *                 property="pagination",
+     *                 type="object",
+     *                 @OA\Property(property="currentPage", type="integer", example=1),
+     *                 @OA\Property(property="totalPages", type="integer", example=3),
+     *                 @OA\Property(property="totalItems", type="integer", example=25),
+     *                 @OA\Property(property="itemsPerPage", type="integer", example=10),
+     *                 @OA\Property(property="hasNext", type="boolean", example=true),
+     *                 @OA\Property(property="hasPrevious", type="boolean", example=false)
+     *             ),
+     *             @OA\Property(
+     *                 property="links",
+     *                 type="object",
+     *                 @OA\Property(property="self", type="string", example="/api/v1/comptes/bloques?page=1&limit=10"),
+     *                 @OA\Property(property="first", type="string", example="/api/v1/comptes/bloques?page=1"),
+     *                 @OA\Property(property="last", type="string", example="/api/v1/comptes/bloques?page=3"),
+     *                 @OA\Property(property="next", type="string", nullable=true, example="/api/v1/comptes/bloques?page=2"),
+     *                 @OA\Property(property="previous", type="string", nullable=true, example="/api/v1/comptes/bloques?page=1")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Paramètres invalides",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Validation failed"),
+     *             @OA\Property(property="errors", type="object")
+     *         )
+     *     )
+     * )
+     */
+    public function getBlockedAccounts(Request $request): JsonResponse
     {
-        // Validation des données d'entrée
+        // Validation des paramètres de requête
         $request->validate([
-            'motif' => 'required|string|max:255'
-        ], [
-            'motif.required' => 'Le motif de déblocage est obligatoire.',
-            'motif.max' => 'Le motif ne peut pas dépasser 255 caractères.'
+            'page' => 'sometimes|integer|min:1',
+            'limit' => 'sometimes|integer|min:1|max:100'
         ]);
 
-        // Recherche du compte par numéro de compte uniquement
-        $compte = Compte::where('numeroCompte', $compteId)->first();
+        // Construction de la requête pour les comptes bloqués (seulement les comptes épargne)
+        $query = Compte::with(['client.user'])
+            ->where('statut', 'bloque')
+            ->where('type', 'epargne')
+            ->orderBy('created_at', 'desc');
 
-        if (!$compte) {
-            return response()->json([
-                'success' => false,
-                'error' => [
-                    'code' => 'COMPTE_NOT_FOUND',
-                    'message' => 'Le compte avec l\'ID spécifié n\'existe pas',
-                    'details' => [
-                        'compteId' => $compteId
-                    ]
-                ]
-            ], 404);
-        }
+        // Pagination
+        $perPage = $request->get('limit', 10);
+        $comptes = $query->paginate($perPage);
 
-        // Vérifier que c'est un compte épargne
-        if ($compte->type !== 'epargne') {
-            return response()->json([
-                'success' => false,
-                'error' => [
-                    'code' => 'OPERATION_NOT_ALLOWED',
-                    'message' => 'Le déblocage n\'est autorisé que pour les comptes épargne',
-                    'details' => [
-                        'compteId' => $compteId,
-                        'type' => $compte->type,
-                        'typeRequis' => 'epargne'
-                    ]
-                ]
-            ], 400);
-        }
-
-        // Vérifier que le compte est bloqué
-        if ($compte->statut !== 'bloque') {
-            return response()->json([
-                'success' => false,
-                'error' => [
-                    'code' => 'COMPTE_NOT_BLOCKED',
-                    'message' => 'Le compte n\'est pas bloqué',
-                    'details' => [
-                        'compteId' => $compteId,
-                        'statut' => $compte->statut
-                    ]
-                ]
-            ], 409);
-        }
-
-        // Récupérer le statut avant blocage depuis les métadonnées
-        $statutAvantBlocage = $compte->metadata['statutAvantBlocage'] ?? 'actif';
-
-        // Mettre à jour le compte
-        $metadata = $compte->metadata ?? [];
-        $metadata['motifDeblocage'] = $request->motif;
-        $metadata['dateDeblocage'] = now()->toISOString();
-        unset($metadata['motifBlocage'], $metadata['dateBlocage'], $metadata['dureeBlocage'], $metadata['dateFinBlocage'], $metadata['statutAvantBlocage']);
-
-        $compte->update([
-            'statut' => $statutAvantBlocage,
-            'metadata' => $metadata
-        ]);
-
-        return response()->json([
+        // Construction de la réponse
+        $response = [
             'success' => true,
-            'message' => 'Compte débloqué avec succès',
-            'data' => [
-                'compteId' => $compte->id,
-                'numeroCompte' => $compte->numeroCompte,
-                'type' => $compte->type,
-                'statut' => $compte->statut,
-                'dateDeblocage' => now()->toISOString()
+            'data' => CompteResource::collection($comptes->items()),
+            'pagination' => [
+                'currentPage' => $comptes->currentPage(),
+                'totalPages' => $comptes->lastPage(),
+                'totalItems' => $comptes->total(),
+                'itemsPerPage' => $comptes->perPage(),
+                'hasNext' => $comptes->hasMorePages(),
+                'hasPrevious' => $comptes->currentPage() > 1
+            ],
+            'links' => [
+                'self' => $request->url() . '?' . http_build_query($request->query()),
+                'first' => $comptes->url(1),
+                'last' => $comptes->url($comptes->lastPage()),
             ]
-        ]);
+        ];
+
+        // Ajout des liens next/previous si disponibles
+        if ($comptes->hasMorePages()) {
+            $response['links']['next'] = $comptes->nextPageUrl();
+        }
+
+        if ($comptes->currentPage() > 1) {
+            $response['links']['previous'] = $comptes->previousPageUrl();
+        }
+
+        return response()->json($response);
     }
 
     public function archive(Request $request, string $compteId): JsonResponse

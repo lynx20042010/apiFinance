@@ -20,9 +20,9 @@ class CompteFactory extends Factory
             'id' => (string) \Illuminate\Support\Str::uuid(),
             'client_id' => \App\Models\Client::factory(),
             'numeroCompte' => \App\Models\Compte::generateNumeroCompte(),
-            'type' => $this->faker->randomElement(['courant', 'epargne', 'titre', 'devise']),
+            'type' => $this->faker->randomElement(['cheque', 'courant', 'epargne']),
             'devise' => $this->faker->randomElement(['XAF', 'EUR', 'USD', 'CAD']),
-            'statut' => $this->faker->randomElement(['actif', 'inactif', 'bloque', 'ferme']),
+            'statut' => $this->faker->randomElement(['actif', 'inactif', 'bloque']),
             'solde' => $this->faker->randomFloat(2, 0, 1000000),
             'metadata' => [
                 'date_ouverture' => $this->faker->date(),

@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('admins', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->string('user_id');
-            $table->enum('role', ['super_admin', 'admin', 'moderator'])->default('admin');
+            $table->enum('role', ['admin'])->default('admin');
             $table->json('metadata')->nullable();
             $table->timestamps();
 

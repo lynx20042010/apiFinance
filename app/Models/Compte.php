@@ -11,20 +11,15 @@ class Compte extends Model
 {
     use HasFactory;
 
-    protected $connection = 'render';
+    protected $connection = 'render2';
 
     /**
      * Get the appropriate connection based on account status
      */
     public function getConnectionName()
     {
-        // Use Render2 for blocked accounts, Render for others
-        if ($this->statut === 'bloque') {
-            return 'render2';
-        }
-
-        // Use render connection for all other accounts
-        return 'render';
+        // Use render2 connection for all accounts (simplified logic)
+        return 'render2';
     }
 
     protected $fillable = [
@@ -174,28 +169,19 @@ class Compte extends Model
     }
 
     /**
-     * Vérifier si le compte peut être archivé
-     * Un compte épargne bloqué peut être archivé si la date de début de blocage est échue (plus de 30 jours)
+     * Vérifier si le compte peut être bloqué
+     * Seuls les comptes épargne actifs peuvent être bloqués
      */
-    public function peutEtreArchive(): bool
+    public function peutEtreBloque(): bool
     {
-        if ($this->type !== 'epargne' || $this->statut !== 'bloque') {
-            return false;
-        }
-
-        $dateBlocage = $this->metadata['dateBlocage'] ?? null;
-        if (!$dateBlocage) {
-            return false;
-        }
-
-        return \Carbon\Carbon::parse($dateBlocage)->addDays(30)->isPast();
+        return $this->type === 'epargne' && $this->statut === 'actif';
     }
 
     /**
-     * Vérifier si le compte peut être désarchivé
-     * Un compte épargne bloqué peut être désarchivé si la date de fin de blocage est échue
+     * Vérifier si le compte peut être débloqué
+     * Un compte épargne bloqué peut être débloqué si la date de fin de blocage est échue
      */
-    public function peutEtreDesarchive(): bool
+    public function peutEtreDebloque(): bool
     {
         if ($this->type !== 'epargne' || $this->statut !== 'bloque') {
             return false;
@@ -210,11 +196,20 @@ class Compte extends Model
     }
 
     /**
-     * Vérifier si le compte peut être débloqué
-     * Alias pour peutEtreDesarchive selon les règles métier
+     * Vérifier si le compte peut être désarchivé
+     * Un compte épargne fermé (archivé) peut être désarchivé si la date de fin d'archivage est échue
      */
-    public function peutEtreDebloque(): bool
+    public function peutEtreDesarchive(): bool
     {
-        return $this->peutEtreDesarchive();
+        if ($this->type !== 'epargne' || $this->statut !== 'ferme') {
+            return false;
+        }
+
+        $dateFinArchivage = $this->metadata['dateFinArchivage'] ?? null;
+        if (!$dateFinArchivage) {
+            return false;
+        }
+
+        return \Carbon\Carbon::parse($dateFinArchivage)->isPast();
     }
 }

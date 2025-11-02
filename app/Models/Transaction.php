@@ -10,7 +10,7 @@ class Transaction extends Model
 {
     use HasFactory;
 
-    protected $connection = 'render';
+    protected $connection = 'render2';
 
     protected $fillable = [
         'compte_id',

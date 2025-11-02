@@ -30,8 +30,8 @@ class AuthController extends Controller
      *         required=true,
      *         @OA\JsonContent(
      *             required={"email", "password"},
-     *             @OA\Property(property="email", type="string", format="email", example="admin@example.com"),
-     *             @OA\Property(property="password", type="string", format="password", example="admin123")
+     *             @OA\Property(property="email", type="string", format="email", example="admin@apifinance.com ou client@apifinance.com"),
+     *             @OA\Property(property="password", type="string", format="password", example="admin123 ou client123")
      *         )
      *     ),
      *     @OA\Response(
@@ -45,8 +45,8 @@ class AuthController extends Controller
      *                 type="object",
      *                 @OA\Property(property="user", type="object",
      *                     @OA\Property(property="id", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
-     *                     @OA\Property(property="name", type="string", example="Admin User"),
-     *                     @OA\Property(property="email", type="string", format="email", example="admin@example.com"),
+     *                     @OA\Property(property="name", type="string", example="Admin System"),
+     *                     @OA\Property(property="email", type="string", format="email", example="admin@apifinance.com"),
      *                     @OA\Property(property="role", type="string", enum={"admin", "client"}, example="admin")
      *                 ),
      *                 @OA\Property(property="access_token", type="string", example="eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."),
@@ -443,12 +443,12 @@ class AuthController extends Controller
      *             @OA\Property(
      *                 property="data",
      *                 type="object",
-     *                 @OA\Property(property="user", type="object",
-     *                     @OA\Property(property="id", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
-     *                     @OA\Property(property="name", type="string", example="Admin User"),
-     *                     @OA\Property(property="email", type="string", format="email", example="admin@example.com"),
-     *                     @OA\Property(property="role", type="string", enum={"admin", "client"}, example="admin")
-     *                 )
+     *             @OA\Property(property="user", type="object",
+     *                 @OA\Property(property="id", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
+     *                 @OA\Property(property="name", type="string", example="Client Test"),
+     *                 @OA\Property(property="email", type="string", format="email", example="client@apifinance.com"),
+     *                 @OA\Property(property="role", type="string", enum={"admin", "client"}, example="client")
+     *             )
      *             )
      *         )
      *     )

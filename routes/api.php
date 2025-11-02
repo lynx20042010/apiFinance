@@ -30,26 +30,31 @@ Route::prefix('v1')->group(function () {
     Route::middleware(['auth:api', 'logging'])->group(function () {
         // Routes pour tous les utilisateurs authentifiés
         Route::get('comptes', [CompteController::class, 'index']);
+
+        // Routes réservées aux administrateurs (toutes les permissions) - placées avant les routes paramétrées
+        Route::middleware('role:admin')->group(function () {
+            // Opérations spéciales réservées aux admins
+            Route::get('comptes/bloques', [CompteController::class, 'getBlockedAccounts']);
+            Route::post('comptes/{compte}/block', [CompteController::class, 'block']);
+        });
+
+        // Route paramétrée pour récupérer un compte spécifique
         Route::get('comptes/{compteId}', [CompteController::class, 'show']);
 
         // Routes réservées aux clients (pour leurs propres comptes)
         Route::middleware('role:client')->group(function () {
+            Route::post('comptes', [CompteController::class, 'store']);
             Route::put('comptes/{compteId}', [CompteController::class, 'update']);
+            Route::delete('comptes/{compteId}', [CompteController::class, 'destroy']);
         });
 
-        // Routes réservées aux administrateurs pour modifier tous les comptes
-        Route::middleware('role:admin')->group(function () {
-            Route::put('admin/comptes/{compteId}', [CompteController::class, 'update']);
-        });
-
-        // Routes réservées aux administrateurs
+        // Routes réservées aux administrateurs (toutes les permissions)
         Route::middleware('role:admin')->group(function () {
             Route::post('comptes', [CompteController::class, 'store']);
+            Route::put('comptes/{compteId}', [CompteController::class, 'update']);
             Route::delete('comptes/{compteId}', [CompteController::class, 'destroy']);
 
-            // Opérations spéciales réservées aux admins
-            Route::post('comptes/{compte}/block', [CompteController::class, 'block']);
-            Route::post('comptes/{compte}/unblock', [CompteController::class, 'unblock']);
+            // Note: unblock, archive sont automatiques via jobs - pas d'actions manuelles
         });
     });
 });

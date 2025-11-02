@@ -31,11 +31,11 @@ class UserSeeder extends Seeder
         Admin::create([
             'id' => (string) \Illuminate\Support\Str::uuid(),
             'user_id' => $adminUser->id,
-            'role' => 'super_admin',
+            'role' => 'admin',
             'metadata' => json_encode([
                 'created_by' => 'system',
                 'department' => 'IT',
-                'level' => 'super_admin',
+                'level' => 'admin',
                 'permissions' => [
                     'comptes.create',
                     'comptes.read',

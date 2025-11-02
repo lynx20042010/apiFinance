@@ -1,9 +1,9 @@
 services:
   - type: web
     name: api-finance
-    runtime: docker
-    dockerfilePath: ./Dockerfile
-    dockerContext: ./
+    runtime: php
+    buildCommand: "composer install --no-dev --optimize-autoloader"
+    startCommand: "php artisan serve --host=0.0.0.0 --port=$PORT"
     plan: starter
     healthCheckPath: /health
     envVars:

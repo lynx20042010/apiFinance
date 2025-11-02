@@ -15,9 +15,9 @@ return new class extends Migration
             $table->string('id')->primary();
             $table->string('client_id');
             $table->string('numeroCompte')->unique();
-            $table->enum('type', ['courant', 'epargne', 'entreprise']);
+            $table->enum('type', ['cheque', 'courant', 'epargne']);
             $table->string('devise', 3)->default('XOF');
-            $table->enum('statut', ['actif', 'inactif', 'bloque', 'archive'])->default('actif');
+            $table->enum('statut', ['actif', 'inactif', 'bloque', 'ferme'])->default('actif');
             $table->decimal('solde', 15, 2)->default(0);
             $table->json('metadata')->nullable();
             $table->timestamps();

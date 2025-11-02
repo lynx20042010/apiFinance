@@ -304,8 +304,7 @@
                                 "required": [
                                     "type",
                                     "soldeInitial",
-                                    "devise",
-                                    "client"
+                                    "devise"
                                 ],
                                 "properties": {
                                     "type": {
@@ -335,6 +334,7 @@
                                         "example": "XAF"
                                     },
                                     "client": {
+                                        "description": "Requis uniquement pour les administrateurs. Les clients utilisent automatiquement leurs propres informations.",
                                         "properties": {
                                             "id": {
                                                 "type": "string",
@@ -444,6 +444,28 @@
                                                         }
                                                     },
                                                     "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "credentials": {
+                                            "properties": {
+                                                "email": {
+                                                    "type": "string",
+                                                    "format": "email",
+                                                    "example": "cheikh.sy@example.com"
+                                                },
+                                                "password": {
+                                                    "type": "string",
+                                                    "example": "TempPass123"
+                                                },
+                                                "numero_compte_client": {
+                                                    "type": "string",
+                                                    "example": "CLT2024000001"
+                                                },
+                                                "code_authentification": {
+                                                    "type": "string",
+                                                    "example": "123456"
                                                 }
                                             },
                                             "type": "object"
@@ -1393,45 +1415,42 @@
                 ]
             }
         },
-        "/v1/comptes/{compteId}/unblock": {
-            "post": {
+        "/v1/comptes/bloques": {
+            "get": {
                 "tags": [
                     "Comptes"
                 ],
-                "summary": "Débloquer manuellement un compte épargne (réservé aux administrateurs)",
-                "description": "Débloque manuellement un compte bancaire de type épargne précédemment bloqué. Cette opération est généralement automatique via job.",
-                "operationId": "unblockCompte",
+                "summary": "Lister tous les comptes bloqués",
+                "description": "Récupère la liste de tous les comptes actuellement bloqués. Réservé aux administrateurs.",
+                "operationId": "getBlockedAccounts",
                 "parameters": [
                     {
-                        "name": "compteId",
-                        "in": "path",
-                        "description": "ID UUID ou numéro de compte à débloquer",
-                        "required": true,
+                        "name": "page",
+                        "in": "query",
+                        "description": "Numéro de page",
+                        "required": false,
                         "schema": {
-                            "type": "string"
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Nombre d'éléments par page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10,
+                            "maximum": 100,
+                            "minimum": 1
                         }
                     }
                 ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "motif": {
-                                        "type": "string",
-                                        "maxLength": 255,
-                                        "example": "Blocage levé suite à vérification"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
                 "responses": {
                     "200": {
-                        "description": "Compte débloqué avec succès",
+                        "description": "Liste des comptes bloqués récupérée avec succès",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1440,33 +1459,129 @@
                                             "type": "boolean",
                                             "example": true
                                         },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Compte débloqué avec succès"
-                                        },
                                         "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "string",
+                                                        "format": "uuid",
+                                                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                                                    },
+                                                    "numeroCompte": {
+                                                        "type": "string",
+                                                        "example": "C00123456"
+                                                    },
+                                                    "titulaire": {
+                                                        "type": "string",
+                                                        "example": "Amadou Diallo"
+                                                    },
+                                                    "type": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "cheque",
+                                                            "courant",
+                                                            "epargne"
+                                                        ],
+                                                        "example": "epargne"
+                                                    },
+                                                    "solde": {
+                                                        "type": "number",
+                                                        "format": "float",
+                                                        "example": 1250000
+                                                    },
+                                                    "devise": {
+                                                        "type": "string",
+                                                        "example": "XAF"
+                                                    },
+                                                    "dateCreation": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "example": "2023-03-15T00:00:00Z"
+                                                    },
+                                                    "statut": {
+                                                        "type": "string",
+                                                        "example": "bloque"
+                                                    },
+                                                    "motifBlocage": {
+                                                        "type": "string",
+                                                        "example": "Inactivité de 30+ jours"
+                                                    },
+                                                    "dateBlocage": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "example": "2023-06-10T14:30:00Z"
+                                                    },
+                                                    "metadata": {
+                                                        "properties": {
+                                                            "derniereModification": {
+                                                                "type": "string",
+                                                                "format": "date-time",
+                                                                "example": "2023-06-10T14:30:00Z"
+                                                            },
+                                                            "version": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        },
+                                        "pagination": {
                                             "properties": {
-                                                "compteId": {
-                                                    "type": "string",
-                                                    "format": "uuid",
-                                                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                                                "currentPage": {
+                                                    "type": "integer",
+                                                    "example": 1
                                                 },
-                                                "numeroCompte": {
-                                                    "type": "string",
-                                                    "example": "CPT2025000001"
+                                                "totalPages": {
+                                                    "type": "integer",
+                                                    "example": 3
                                                 },
-                                                "type": {
-                                                    "type": "string",
-                                                    "example": "epargne"
+                                                "totalItems": {
+                                                    "type": "integer",
+                                                    "example": 25
                                                 },
-                                                "statut": {
-                                                    "type": "string",
-                                                    "example": "actif"
+                                                "itemsPerPage": {
+                                                    "type": "integer",
+                                                    "example": 10
                                                 },
-                                                "dateDeblocage": {
+                                                "hasNext": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "hasPrevious": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "links": {
+                                            "properties": {
+                                                "self": {
                                                     "type": "string",
-                                                    "format": "date-time",
-                                                    "example": "2023-06-10T14:30:00Z"
+                                                    "example": "/api/v1/comptes/bloques?page=1&limit=10"
+                                                },
+                                                "first": {
+                                                    "type": "string",
+                                                    "example": "/api/v1/comptes/bloques?page=1"
+                                                },
+                                                "last": {
+                                                    "type": "string",
+                                                    "example": "/api/v1/comptes/bloques?page=3"
+                                                },
+                                                "next": {
+                                                    "type": "string",
+                                                    "example": "/api/v1/comptes/bloques?page=2",
+                                                    "nullable": true
+                                                },
+                                                "previous": {
+                                                    "type": "string",
+                                                    "example": "/api/v1/comptes/bloques?page=1",
+                                                    "nullable": true
                                                 }
                                             },
                                             "type": "object"
@@ -1478,84 +1593,16 @@
                         }
                     },
                     "400": {
-                        "description": "Opération non autorisée pour ce type de compte",
+                        "description": "Paramètres invalides",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": false
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Validation failed"
                                         },
-                                        "error": {
-                                            "properties": {
-                                                "code": {
-                                                    "type": "string",
-                                                    "example": "OPERATION_NOT_ALLOWED"
-                                                },
-                                                "message": {
-                                                    "type": "string",
-                                                    "example": "Le déblocage n'est autorisé que pour les comptes épargne"
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Compte non trouvé",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": false
-                                        },
-                                        "error": {
-                                            "properties": {
-                                                "code": {
-                                                    "type": "string",
-                                                    "example": "COMPTE_NOT_FOUND"
-                                                },
-                                                "message": {
-                                                    "type": "string",
-                                                    "example": "Le compte avec l'ID spécifié n'existe pas"
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "409": {
-                        "description": "Compte non bloqué",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": false
-                                        },
-                                        "error": {
-                                            "properties": {
-                                                "code": {
-                                                    "type": "string",
-                                                    "example": "COMPTE_NOT_BLOCKED"
-                                                },
-                                                "message": {
-                                                    "type": "string",
-                                                    "example": "Le compte n'est pas bloqué"
-                                                }
-                                            },
+                                        "errors": {
                                             "type": "object"
                                         }
                                     },
@@ -1564,7 +1611,12 @@
                             }
                         }
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/v1/auth/login": {
@@ -1588,12 +1640,12 @@
                                     "email": {
                                         "type": "string",
                                         "format": "email",
-                                        "example": "admin@example.com"
+                                        "example": "admin@apifinance.com ou client@apifinance.com"
                                     },
                                     "password": {
                                         "type": "string",
                                         "format": "password",
-                                        "example": "admin123"
+                                        "example": "admin123 ou client123"
                                     }
                                 },
                                 "type": "object"
@@ -1627,12 +1679,12 @@
                                                         },
                                                         "name": {
                                                             "type": "string",
-                                                            "example": "Admin User"
+                                                            "example": "Admin System"
                                                         },
                                                         "email": {
                                                             "type": "string",
                                                             "format": "email",
-                                                            "example": "admin@example.com"
+                                                            "example": "admin@apifinance.com"
                                                         },
                                                         "role": {
                                                             "type": "string",
@@ -2058,12 +2110,12 @@
                                                         },
                                                         "name": {
                                                             "type": "string",
-                                                            "example": "Admin User"
+                                                            "example": "Client Test"
                                                         },
                                                         "email": {
                                                             "type": "string",
                                                             "format": "email",
-                                                            "example": "admin@example.com"
+                                                            "example": "client@apifinance.com"
                                                         },
                                                         "role": {
                                                             "type": "string",
@@ -2071,7 +2123,7 @@
                                                                 "admin",
                                                                 "client"
                                                             ],
-                                                            "example": "admin"
+                                                            "example": "client"
                                                         }
                                                     },
                                                     "type": "object"
@@ -2098,9 +2150,9 @@
         "securitySchemes": {
             "bearerAuth": {
                 "type": "http",
-                "description": "Token d'accès OAuth2 obtenu via /api/v1/auth/login",
+                "scheme": "bearer",
                 "bearerFormat": "JWT",
-                "scheme": "bearer"
+                "description": "Token d'accès OAuth2 obtenu via /api/v1/auth/login"
             }
         }
     },
@@ -2116,7 +2168,7 @@
     ],
     "security": [
         {
-            "sanctum": []
+            "bearerAuth": []
         }
     ]
 }

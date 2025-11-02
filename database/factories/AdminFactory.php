@@ -19,7 +19,7 @@ class AdminFactory extends Factory
         return [
             'id' => (string) \Illuminate\Support\Str::uuid(),
             'user_id' => \App\Models\User::factory(),
-            'role' => $this->faker->randomElement(['admin', 'moderator']),
+            'role' => 'admin',
             'metadata' => [
                 'departement' => $this->faker->randomElement(['IT', 'Finance', 'Support', 'Management']),
                 'niveau_acces' => $this->faker->numberBetween(1, 5),
@@ -30,12 +30,12 @@ class AdminFactory extends Factory
     }
 
     /**
-     * Admin avec rôle super_admin
+     * Admin standard
      */
-    public function superAdmin(): static
+    public function admin(): static
     {
         return $this->state(fn (array $attributes) => [
-            'role' => 'super_admin',
+            'role' => 'admin',
             'metadata' => array_merge($attributes['metadata'] ?? [], [
                 'niveau_acces' => 5,
                 'privileges' => ['all']
@@ -43,29 +43,5 @@ class AdminFactory extends Factory
         ]);
     }
 
-    /**
-     * Admin normal
-     */
-    public function admin(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'role' => 'admin',
-            'metadata' => array_merge($attributes['metadata'] ?? [], [
-                'niveau_acces' => 4
-            ])
-        ]);
-    }
 
-    /**
-     * Modérateur
-     */
-    public function moderator(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'role' => 'moderator',
-            'metadata' => array_merge($attributes['metadata'] ?? [], [
-                'niveau_acces' => 3
-            ])
-        ]);
-    }
 }

@@ -22,14 +22,14 @@ class StoreCompteRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'type' => 'required|in:cheque,courant,epargne,titre,devise',
+            'type' => 'required|in:cheque,courant,epargne',
             'soldeInitial' => 'required|numeric|min:10000',
             'devise' => 'required|string|size:3|in:XAF,EUR,USD,CAD,GBP',
             'client' => 'required|array',
             'client.id' => 'nullable|string',
             'client.titulaire' => 'required_without:client.id|string|max:255',
             'client.email' => 'required_without:client.id|email|unique:users,email',
-            'client.telephone' => 'required_without:client.id|string|regex:/^\+221[0-9]{9}$/',
+            'client.telephone' => 'required_without:client.id|string|regex:/^\+221[0-9]{8,9}$/',
             'client.adresse' => 'required_without:client.id|string|max:500'
         ];
     }
@@ -41,7 +41,7 @@ class StoreCompteRequest extends FormRequest
     {
         return [
             'type.required' => 'Le type de compte est obligatoire.',
-            'type.in' => 'Le type doit être cheque, courant, épargne, titre ou devise.',
+            'type.in' => 'Le type doit être cheque, courant ou épargne.',
             'soldeInitial.required' => 'Le solde initial est obligatoire.',
             'soldeInitial.numeric' => 'Le solde initial doit être un nombre.',
             'soldeInitial.min' => 'Le solde initial doit être d\'au moins 10 000.',

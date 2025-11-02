@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'default' => env('DB_CONNECTION', 'pgsql'),
+    'default' => env('DB_CONNECTION', 'render2'),
 
     /*
     |--------------------------------------------------------------------------
@@ -96,11 +96,26 @@ return [
         'render2' => [
             'driver' => 'pgsql',
             'url' => env('RENDER2_DATABASE_URL'),
-            'host' => env('RENDER2_DB_HOST', 'dpg-d435s8uuk2gs738oqp20-a'),
+            'host' => env('RENDER2_DB_HOST', 'dpg-d435s8uuk2gs738oqp20-a.oregon-postgres.render.com'),
             'port' => env('RENDER2_DB_PORT', '5432'),
             'database' => env('RENDER2_DB_DATABASE', 'apifinance'),
             'username' => env('RENDER2_DB_USERNAME', 'apifinance_user'),
             'password' => env('RENDER2_DB_PASSWORD'),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => 'require',
+        ],
+
+        'render3' => [
+            'driver' => 'pgsql',
+            'url' => env('RENDER3_DATABASE_URL'),
+            'host' => env('RENDER3_DB_HOST', 'dpg-d40bs9jipnbc73cirh4g-a.oregon-postgres.render.com'),
+            'port' => env('RENDER3_DB_PORT', '5432'),
+            'database' => env('RENDER3_DB_DATABASE', 'apifinacedb'),
+            'username' => env('RENDER3_DB_USERNAME', 'apifinacedb_user'),
+            'password' => env('RENDER3_DB_PASSWORD'),
             'charset' => 'utf8',
             'prefix' => '',
             'prefix_indexes' => true,

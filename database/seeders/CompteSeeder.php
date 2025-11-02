@@ -12,15 +12,53 @@ class CompteSeeder extends Seeder
      */
     public function run(): void
     {
-        // Créer des comptes pour les clients existants
+        // Créer 15 comptes d'épargne actifs pour 3 clients propriétaires
         $clients = \App\Models\Client::all();
 
-        foreach ($clients as $client) {
+        // S'assurer qu'on a au moins 3 clients
+        if ($clients->count() < 3) {
+            // Créer des clients supplémentaires si nécessaire
+            for ($i = $clients->count(); $i < 3; $i++) {
+                $user = \App\Models\User::factory()->create([
+                    'name' => 'Client Propriétaire ' . ($i + 1),
+                    'email' => 'proprietaire' . ($i + 1) . '@apifinance.com',
+                    'password' => \Illuminate\Support\Facades\Hash::make('proprio123'),
+                    'email_verified_at' => now(),
+                ]);
+
+                $client = \App\Models\Client::factory()->create([
+                    'user_id' => $user->id,
+                    'numeroCompte' => 'CLT' . date('Y') . str_pad(($i + 1), 6, '0', STR_PAD_LEFT),
+                    'titulaire' => 'Client Propriétaire ' . ($i + 1),
+                    'type' => 'particulier',
+                    'statut' => 'actif',
+                ]);
+
+                $clients->push($client);
+            }
+        }
+
+        // Créer 15 comptes d'épargne actifs répartis entre les 3 premiers clients
+        $clientsProprietaires = $clients->take(3);
+        $comptesParClient = 5; // 15 / 3 = 5 comptes par client
+
+        foreach ($clientsProprietaires as $client) {
+            for ($i = 0; $i < $comptesParClient; $i++) {
+                \App\Models\Compte::factory()->epargne()->actif()->create([
+                    'client_id' => $client->id,
+                    'solde' => rand(10000, 500000), // Solde entre 10k et 500k
+                ]);
+            }
+        }
+
+        // Créer des comptes supplémentaires pour les autres clients existants
+        $autresClients = $clients->skip(3);
+        foreach ($autresClients as $client) {
             // Chaque client a entre 1 et 3 comptes
             $nombreComptes = rand(1, 3);
 
             for ($i = 0; $i < $nombreComptes; $i++) {
-                \App\Models\Compte::factory()->create([
+                \App\Models\Compte::factory()->actif()->create([
                     'client_id' => $client->id,
                 ]);
             }
@@ -74,6 +112,48 @@ class CompteSeeder extends Seeder
                     'agence' => 'Yaoundé Centre',
                     'rib' => 'CM2110123456789012345678904',
                     'iban' => 'CM2110123456789012345678904'
+                ]
+            ]);
+
+            // Compte épargne bloqué pour les tests
+            \App\Models\Compte::factory()->create([
+                'client_id' => $clientDupont->id,
+                'numeroCompte' => 'CPT2024000007',
+                'type' => 'epargne',
+                'devise' => 'XAF',
+                'statut' => 'bloque',
+                'solde' => 50000.00,
+                'metadata' => [
+                    'date_ouverture' => '2024-07-01',
+                    'agence' => 'Yaoundé Centre',
+                    'rib' => 'CM2110123456789012345678907',
+                    'iban' => 'CM2110123456789012345678907',
+                    'motifBlocage' => 'Inactivité prolongée',
+                    'dateBlocage' => '2024-10-15T10:00:00Z',
+                    'dureeBlocage' => 30,
+                    'dateFinBlocage' => '2024-11-14T10:00:00Z',
+                    'statutAvantBlocage' => 'actif'
+                ]
+            ]);
+
+            // Compte courant bloqué pour les tests
+            \App\Models\Compte::factory()->create([
+                'client_id' => $clientDupont->id,
+                'numeroCompte' => 'CPT2024000008',
+                'type' => 'courant',
+                'devise' => 'EUR',
+                'statut' => 'bloque',
+                'solde' => 100000.00,
+                'metadata' => [
+                    'date_ouverture' => '2024-08-10',
+                    'agence' => 'Yaoundé Centre',
+                    'rib' => 'CM2110123456789012345678908',
+                    'iban' => 'CM2110123456789012345678908',
+                    'motifBlocage' => 'Suspicion d\'activité frauduleuse',
+                    'dateBlocage' => '2024-10-20T14:30:00Z',
+                    'dureeBlocage' => 60,
+                    'dateFinBlocage' => '2024-12-19T14:30:00Z',
+                    'statutAvantBlocage' => 'actif'
                 ]
             ]);
         }

@@ -10,7 +10,7 @@ class Admin extends Model
 {
     use HasFactory;
 
-    protected $connection = 'render';
+    protected $connection = 'render2';
 
     protected $fillable = [
         'user_id',
@@ -36,15 +36,7 @@ class Admin extends Model
     }
 
     /**
-     * Vérifier si c'est un super admin
-     */
-    public function isSuperAdmin(): bool
-    {
-        return $this->role === 'super_admin';
-    }
-
-    /**
-     * Vérifier si c'est un admin normal
+     * Vérifier si c'est un admin
      */
     public function isAdmin(): bool
     {

@@ -13,7 +13,7 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected $connection = 'render';
+    protected $connection = 'render2';
 
     /**
      * The attributes that are mass assignable.
