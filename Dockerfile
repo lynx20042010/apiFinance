@@ -60,8 +60,6 @@ COPY . /var/www/html
 # Set working directory to Apache root
 WORKDIR /var/www/html
 
-# Copy existing application directory permissions
-COPY --chown=www-data:www-data . /var/www/html
 
 # Install Node.js dependencies and build assets (only if package.json exists)
 RUN if [ -f package.json ]; then npm install && npm run build; else echo "No package.json found, skipping npm build"; fi
