@@ -44,9 +44,12 @@ COPY composer.json composer.lock ./
 # Install PHP dependencies (without dev dependencies for production)
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
-# Copy essential Laravel files for dump-autoload
+# Copy Laravel application files BEFORE dump-autoload
+COPY app/ app/
+COPY config/ config/
+COPY routes/ routes/
+COPY bootstrap/ bootstrap/
 COPY artisan ./
-COPY bootstrap/app.php bootstrap/
 
 # Run composer dump-autoload
 RUN composer dump-autoload --optimize --no-interaction
