@@ -35,8 +35,8 @@ RUN pecl install redis && docker-php-ext-enable redis
 # Get latest Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Set working directory
-WORKDIR /var/www
+# Set working directory to Apache root
+WORKDIR /var/www/html
 
 # Copy composer files first for better caching
 COPY composer.json composer.lock ./
@@ -54,11 +54,8 @@ COPY artisan ./
 # Run composer dump-autoload
 RUN composer dump-autoload --optimize --no-interaction
 
-# Copy existing application directory contents
-COPY . /var/www/html
-
-# Set working directory to Apache root
-WORKDIR /var/www/html
+# Copy existing application directory contents (excluding vendor due to .dockerignore)
+COPY . .
 
 
 # Install Node.js dependencies and build assets (only if package.json exists)
