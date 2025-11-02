@@ -60,6 +60,18 @@ services:
       - key: SEED_DB
         value: true
 
+      # --- SECOND DATABASE (Render2) ---
+      - key: RENDER2_DB_HOST
+        value: dpg-d435s8uuk2gs738oqp20-a
+      - key: RENDER2_DB_DATABASE
+        value: apifinance
+      - key: RENDER2_DB_USERNAME
+        value: apifinance_user
+      - key: RENDER2_DB_PASSWORD
+        value: FBURK2fnqStM5e2XbXQcGztCCH63tU2D
+      - key: RENDER2_DB_PORT
+        value: 5432
+
 databases:
   - name: api-finance-db
     databaseName: apifinancedb

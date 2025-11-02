@@ -38,20 +38,20 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www
 
-# Copy composer files and artisan for scripts
-COPY composer.json composer.lock artisan ./
-
-# Copy existing application directory contents
-COPY . /var/www/html
-
-# Set working directory to Apache root
-WORKDIR /var/www/html
+# Copy composer files first for better caching
+COPY composer.json composer.lock ./
 
 # Install PHP dependencies (without dev dependencies for production)
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
 # Run composer dump-autoload
 RUN composer dump-autoload --optimize --no-interaction
+
+# Copy existing application directory contents
+COPY . /var/www/html
+
+# Set working directory to Apache root
+WORKDIR /var/www/html
 
 # Copy existing application directory permissions
 COPY --chown=www-data:www-data . /var/www/html
