@@ -50,11 +50,15 @@ COPY config/ config/
 COPY routes/ routes/
 COPY bootstrap/ bootstrap/
 COPY artisan ./
+COPY public/ public/
+COPY database/ database/
+COPY resources/ resources/
+COPY storage/ storage/
 
 # Run composer dump-autoload
 RUN composer dump-autoload --optimize --no-interaction
 
-# Copy existing application directory contents (excluding vendor due to .dockerignore)
+# Copy remaining application files (excluding vendor due to .dockerignore)
 COPY . .
 
 
