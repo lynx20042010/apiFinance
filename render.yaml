@@ -1,9 +1,9 @@
 services:
   - type: web
     name: api-finance
-    runtime: php
-    buildCommand: "composer install --no-dev --optimize-autoloader"
-    startCommand: "php artisan serve --host=0.0.0.0 --port=$PORT"
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: ./
     plan: starter
     healthCheckPath: /health
     envVars:
@@ -43,12 +43,29 @@ services:
       # --- LARAVEL SETTINGS ---
       - key: LOG_CHANNEL
         value: stack
-      - key: CACHE_DRIVER
-        value: file
+      - key: CACHE_STORE
+        value: redis
       - key: QUEUE_CONNECTION
-        value: sync
+        value: redis
       - key: SESSION_DRIVER
-        value: file
+        value: redis
+
+      # --- REDIS CONFIGURATION ---
+      - key: REDIS_HOST
+        fromService:
+          type: redis
+          name: api-finance-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: redis
+          name: api-finance-redis
+          property: port
+      - key: REDIS_PASSWORD
+        fromService:
+          type: redis
+          name: api-finance-redis
+          property: password
 
       # --- MAIL ---
       - key: MAIL_MAILER
@@ -58,6 +75,8 @@ services:
       - key: RUN_MIGRATIONS
         value: true
       - key: SEED_DB
+        value: true
+      - key: GENERATE_SWAGGER
         value: true
 
       # --- SECOND DATABASE (Render2) ---
@@ -76,4 +95,8 @@ databases:
   - name: api-finance-db
     databaseName: apifinancedb
     user: apifinancedb_user
+    plan: starter
+
+redis:
+  - name: api-finance-redis
     plan: starter

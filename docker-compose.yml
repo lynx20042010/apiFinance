@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-finance-app
+    ports:
+      - "8000:80"
+    environment:
+      - APP_NAME=API Finance
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - APP_KEY=${APP_KEY}
+      - APP_URL=http://localhost:8000
+
+      # Database
+      - DB_CONNECTION=pgsql
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_DATABASE=api_finance
+      - DB_USERNAME=api_user
+      - DB_PASSWORD=api_password
+
+      # Cache & Queue
+      - CACHE_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+      - SESSION_DRIVER=redis
+
+      # Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+
+      # Mail
+      - MAIL_MAILER=log
+
+      # Custom
+      - SEED_DB=true
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./storage:/var/www/html/storage
+    networks:
+      - api-finance-network
+
+  db:
+    image: postgres:13
+    container_name: api-finance-db
+    environment:
+      - POSTGRES_DB=api_finance
+      - POSTGRES_USER=api_user
+      - POSTGRES_PASSWORD=api_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - api-finance-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: api-finance-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - api-finance-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  api-finance-network:
+    driver: bridge
