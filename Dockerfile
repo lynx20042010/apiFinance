@@ -104,6 +104,10 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
+# Debug: Test database connections
+echo "Testing database connections..."
+php artisan tinker --execute="echo 'Testing render2 connection...'; DB::connection('render2')->getPdo(); echo 'render2 OK\n'; echo 'Testing render3 connection...'; DB::connection('render3')->getPdo(); echo 'render3 OK\n';"
+
 # Start Apache
 apache2-foreground
 EOF

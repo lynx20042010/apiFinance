@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,15 +17,23 @@ use Illuminate\Support\Facades\Cache;
 */
 
 Route::get('/', function () {
-    return response()->json([
-        'message' => 'API Finance - Laravel ' . app()->version(),
-        'status' => 'running',
-        'endpoints' => [
-            'api' => '/api/v1',
-            'health' => '/health',
-            'swagger' => '/api/documentation'
-        ]
-    ]);
+    try {
+        return response()->json([
+            'message' => 'API Finance - Laravel ' . app()->version(),
+            'status' => 'running',
+            'endpoints' => [
+                'api' => '/api/v1',
+                'health' => '/health',
+                'swagger' => '/api/documentation'
+            ]
+        ]);
+    } catch (\Exception $e) {
+        Log::error('Erreur sur la route racine: ' . $e->getMessage());
+        return response()->json([
+            'error' => 'Erreur interne du serveur',
+            'message' => $e->getMessage()
+        ], 500);
+    }
 });
 
 // Health check endpoint for Docker and monitoring
