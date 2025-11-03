@@ -19,7 +19,7 @@ return [
 
     'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 
-    'allowed_origins' => ['http://localhost:3000', 'http://localhost:8000', 'https://apifinance.onrender.com', '*'],
+    'allowed_origins' => ['https://apifinance-1.onrender.com'],
 
     'allowed_origins_patterns' => [],
 
