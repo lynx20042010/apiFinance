@@ -22,17 +22,26 @@ RUN apt-get update && apt-get install -y \
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# Copy composer files first for better caching
+COPY composer.json composer.lock ./
+
+# Install PHP dependencies (without autoloader optimization for now)
+RUN composer install --no-dev --no-scripts
+
 # Copy existing application directory contents
 COPY . /var/www/html
 
 # Copy existing application directory permissions
 COPY --chown=www-data:www-data . /var/www/html
 
-# Install PHP dependencies
-RUN composer install --optimize-autoloader --no-dev
+# Create .env file from .env.example if .env doesn't exist
+RUN if [ ! -f .env ]; then cp .env.example .env; fi
 
 # Generate application key if not exists
 RUN php artisan key:generate --no-interaction
+
+# Optimize autoloader after key generation
+RUN composer dump-autoload --optimize
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html \
@@ -61,7 +70,7 @@ RUN echo '#!/bin/bash\n\
 set -e\n\
 \n\
 # Wait for database to be ready\n\
-until pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USERNAME; do\n\
+until pg_isready -h $RENDER2_DB_HOST -p $RENDER2_DB_PORT -U $RENDER2_DB_USERNAME; do\n\
     echo "Waiting for database..."\n\
     sleep 2\n\
 done\n\
