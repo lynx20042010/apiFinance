@@ -19,7 +19,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    'allowed_origins' => ['https://apifinance-1.onrender.com', 'http://localhost:8000'],
 
     'allowed_origins_patterns' => [],
 
