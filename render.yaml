@@ -1,0 +1,109 @@
+services:
+  - type: web
+    name: api-finance-app
+    runtime: docker
+    buildCommand: docker build -t api-finance .
+    startCommand: docker run -p $PORT:80 --env-file .env api-finance
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_KEY
+        generateValue: true
+      # Base principale (render2)
+      - key: DB_CONNECTION
+        value: render2
+      - key: RENDER2_DB_HOST
+        fromService:
+          type: pgsql
+          name: api-finance-db2
+          property: host
+      - key: RENDER2_DB_PORT
+        fromService:
+          type: pgsql
+          name: api-finance-db2
+          property: port
+      - key: RENDER2_DB_DATABASE
+        fromService:
+          type: pgsql
+          name: api-finance-db2
+          property: database
+      - key: RENDER2_DB_USERNAME
+        fromService:
+          type: pgsql
+          name: api-finance-db2
+          property: user
+      - key: RENDER2_DB_PASSWORD
+        fromService:
+          type: pgsql
+          name: api-finance-db2
+          property: password
+      # Seconde base (render3)
+      - key: RENDER3_DB_HOST
+        fromService:
+          type: pgsql
+          name: api-finance-db3
+          property: host
+      - key: RENDER3_DB_PORT
+        fromService:
+          type: pgsql
+          name: api-finance-db3
+          property: port
+      - key: RENDER3_DB_DATABASE
+        fromService:
+          type: pgsql
+          name: api-finance-db3
+          property: database
+      - key: RENDER3_DB_USERNAME
+        fromService:
+          type: pgsql
+          name: api-finance-db3
+          property: user
+      - key: RENDER3_DB_PASSWORD
+        fromService:
+          type: pgsql
+          name: api-finance-db3
+          property: password
+      # Redis
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: api-finance-redis
+          property: connectionString
+      - key: CACHE_STORE
+        value: redis
+      - key: QUEUE_CONNECTION
+        value: redis
+      - key: SESSION_DRIVER
+        value: redis
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: MAIL_MAILER
+        value: smtp
+      - key: MAIL_HOST
+        value: smtp.gmail.com
+      - key: MAIL_PORT
+        value: 587
+      - key: MAIL_USERNAME
+        value: your-email@gmail.com
+      - key: MAIL_PASSWORD
+        value: your-app-password
+      - key: MAIL_ENCRYPTION
+        value: tls
+      - key: MAIL_FROM_ADDRESS
+        value: your-email@gmail.com
+      - key: MAIL_FROM_NAME
+        value: "API Finance"
+
+  - type: pgsql
+    name: api-finance-db2  # Base principale (render2)
+    ipAllowList: []  # only accessible by other services
+
+  - type: pgsql
+    name: api-finance-db3  # Seconde base (render3)
+    ipAllowList: []  # only accessible by other services
+
+  - type: redis
+    name: api-finance-redis
+    ipAllowList: []  # only accessible by other services

@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:80"
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      # Base principale (render2)
+      - DB_CONNECTION=render2
+      - RENDER2_DB_HOST=db2
+      - RENDER2_DB_PORT=5432
+      - RENDER2_DB_DATABASE=apifinance
+      - RENDER2_DB_USERNAME=apifinance_user
+      - RENDER2_DB_PASSWORD=secure_password
+      # Seconde base (render3)
+      - RENDER3_DB_HOST=db3
+      - RENDER3_DB_PORT=5432
+      - RENDER3_DB_DATABASE=apifinancedb
+      - RENDER3_DB_USERNAME=apifinancedb_user
+      - RENDER3_DB_PASSWORD=secure_password2
+      # Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CACHE_STORE=redis
+      - QUEUE_CONNECTION=redis
+      - SESSION_DRIVER=redis
+    depends_on:
+      - db2
+      - db3
+      - redis
+    volumes:
+      - ./storage:/var/www/html/storage
+    networks:
+      - apifinance
+
+  db2:  # Base principale (render2)
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=apifinance
+      - POSTGRES_USER=apifinance_user
+      - POSTGRES_PASSWORD=secure_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data2:/var/lib/postgresql/data
+    networks:
+      - apifinance
+
+  db3:  # Seconde base (render3)
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=apifinancedb
+      - POSTGRES_USER=apifinancedb_user
+      - POSTGRES_PASSWORD=secure_password2
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data3:/var/lib/postgresql/data
+    networks:
+      - apifinance
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - apifinance
+
+volumes:
+  postgres_data2:
+  postgres_data3:
+  redis_data:
+
+networks:
+  apifinance:
+    driver: bridge
