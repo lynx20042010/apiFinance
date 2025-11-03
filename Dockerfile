@@ -1,3 +1,7 @@
+# ----------------------------------------
+# Dockerfile Laravel + Apache + 2 PostgreSQL
+# ----------------------------------------
+
 # Use the official PHP image with Apache
 FROM php:8.3-apache
 
@@ -28,19 +32,17 @@ COPY composer.json composer.lock ./
 # Install PHP dependencies (without autoloader optimization for now)
 RUN composer install --no-dev --no-scripts
 
-# Copy existing application directory contents
+# Copy the application code
 COPY . /var/www/html
-
-# Copy existing application directory permissions
 COPY --chown=www-data:www-data . /var/www/html
 
-# Create .env file from .env.example if .env doesn't exist
+# Create .env if not exists
 RUN if [ ! -f .env ]; then cp .env.example .env; fi
 
-# Generate application key if not exists
+# Generate Laravel key if not exists
 RUN php artisan key:generate --no-interaction
 
-# Optimize autoloader after key generation
+# Optimize autoloader
 RUN composer dump-autoload --optimize
 
 # Set permissions
@@ -65,35 +67,39 @@ RUN echo '<VirtualHost *:80>\n\
 # Expose port 80
 EXPOSE 80
 
-# Create startup script
-RUN cat <<EOF > /usr/local/bin/start.sh
+# Create startup script that waits for two databases
+RUN cat <<'EOF' > /usr/local/bin/start.sh
 #!/bin/bash
 set -e
 
-# Debug: print variables for both databases
-echo "RENDER2_DB_HOST=\$RENDER2_DB_HOST"
-echo "RENDER2_DB_PORT=\$RENDER2_DB_PORT"
-echo "RENDER2_DB_USERNAME=\$RENDER2_DB_USERNAME"
-echo "RENDER3_DB_HOST=\$RENDER3_DB_HOST"
-echo "RENDER3_DB_PORT=\$RENDER3_DB_PORT"
-echo "RENDER3_DB_USERNAME=\$RENDER3_DB_USERNAME"
+# Debug: print variables
+echo "DB1_HOST=$DB_HOST"
+echo "DB1_PORT=$DB_PORT"
+echo "DB1_USER=$DB_USERNAME"
 
-# Wait for RENDER2 database to be ready
-until pg_isready -h "\$RENDER2_DB_HOST" -p "\$RENDER2_DB_PORT" -U "\$RENDER2_DB_USERNAME"; do
-    echo "Waiting for RENDER2 database..."
+echo "DB2_HOST=$DB_SECOND_HOST"
+echo "DB2_PORT=$DB_SECOND_PORT"
+echo "DB2_USER=$DB_SECOND_USERNAME"
+
+# Wait for first database
+until pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USERNAME"; do
+    echo "Waiting for database 1..."
     sleep 2
 done
 
-# Wait for RENDER3 database to be ready
-until pg_isready -h "\$RENDER3_DB_HOST" -p "\$RENDER3_DB_PORT" -U "\$RENDER3_DB_USERNAME"; do
-    echo "Waiting for RENDER3 database..."
+# Wait for second database
+until pg_isready -h "$DB_SECOND_HOST" -p "$DB_SECOND_PORT" -U "$DB_SECOND_USERNAME"; do
+    echo "Waiting for database 2..."
     sleep 2
 done
 
-# Run migrations
+# Run migrations on first database
 php artisan migrate --force
 
-# Clear and cache config
+# Run migrations on second database
+php artisan migrate --database=second_connection --force
+
+# Cache config, routes, views
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
