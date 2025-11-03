@@ -16,7 +16,15 @@ use Illuminate\Support\Facades\Cache;
 */
 
 Route::get('/', function () {
-    return ['Laravel' => app()->version()];
+    return response()->json([
+        'message' => 'API Finance - Laravel ' . app()->version(),
+        'status' => 'running',
+        'endpoints' => [
+            'api' => '/api/v1',
+            'health' => '/health',
+            'swagger' => '/api/documentation'
+        ]
+    ]);
 });
 
 // Health check endpoint for Docker and monitoring
