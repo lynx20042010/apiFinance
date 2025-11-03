@@ -10,7 +10,7 @@ Une API RESTful complète pour la gestion des comptes bancaires, clients et tran
 - ✅ Système de rôles (Admin/Client)
 - ✅ API RESTful avec documentation Swagger/OpenAPI
 - ✅ Architecture microservices prête pour la production
-- ✅ Cache Redis et files d'attente
+- ✅ Cache et files d'attente
 - ✅ Logs et monitoring
 - ✅ Support multi-bases de données (PostgreSQL)
 
@@ -19,7 +19,7 @@ Une API RESTful complète pour la gestion des comptes bancaires, clients et tran
 - **Framework**: Laravel 10
 - **Langage**: PHP 8.2
 - **Base de données**: PostgreSQL (multi-bases de données)
-- **Cache/Queue**: Redis
+- **Cache/Queue**: File/Sync
 - **Serveur Web**: Apache/Nginx
 - **Documentation**: Swagger/OpenAPI 3.0
 
@@ -28,7 +28,7 @@ Une API RESTful complète pour la gestion des comptes bancaires, clients et tran
 - PHP 8.2 ou supérieur
 - Composer
 - PostgreSQL
-- Redis (optionnel, pour cache et queues)
+- Redis (optionnel, pour cache et queues - désactivé par défaut)
 - Node.js & NPM (pour assets frontend si nécessaire)
 
 ## 🚀 Installation et Démarrage
@@ -215,13 +215,8 @@ RENDER3_DB_USERNAME=your-secondary-user
 RENDER3_DB_PASSWORD=your-secondary-password
 RENDER3_DB_PORT=5432
 
-# Redis (optionnel)
-REDIS_HOST=your-redis-host
-REDIS_PASSWORD=your-redis-password
-REDIS_PORT=6379
-
-# Cache et Queue
-CACHE_STORE=file  # ou redis si disponible
+# Cache et Queue (Redis désactivé par défaut)
+CACHE_STORE=array  # ou file/redis si disponible
 QUEUE_CONNECTION=sync  # ou redis si disponible
 SESSION_DRIVER=file  # ou redis si disponible
 ```
@@ -271,7 +266,7 @@ SESSION_DRIVER=file  # ou redis si disponible
 - Logs Laravel centralisés
 - Métriques de performance
 - Health checks intégrés
-- Monitoring des files d'attente Redis
+- Monitoring des files d'attente
 
 ## 🤝 Contribution
 

@@ -79,6 +79,3 @@ status: ## Afficher le statut des services
 
 db-connect: ## Se connecter à la base de données
 	docker-compose exec db psql -U api_user -d api_finance
-
-redis-connect: ## Se connecter à Redis
-	docker-compose exec redis redis-cli
