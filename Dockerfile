@@ -81,13 +81,13 @@ echo "DB2_PORT=$RENDER3_DB_PORT"
 echo "DB2_USER=$RENDER3_DB_USERNAME"
 
 # Wait for first database
-until pg_isready -h "$RENDER2_DB_HOST" -p "$RENDER2_DB_PORT" -U "$RENDER2_DB_USERNAME"; do
+until pg_isready -h "$RENDER2_DB_HOST" -p "$RENDER2_DB_PORT"; do
     echo "Waiting for database 1..."
     sleep 2
 done
 
 # Wait for second database
-until pg_isready -h "$RENDER3_DB_HOST" -p "$RENDER3_DB_PORT" -U "$RENDER3_DB_USERNAME"; do
+until pg_isready -h "$RENDER3_DB_HOST" -p "$RENDER3_DB_PORT"; do
     echo "Waiting for database 2..."
     sleep 2
 done
