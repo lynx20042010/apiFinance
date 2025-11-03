@@ -66,25 +66,32 @@ RUN echo '<VirtualHost *:80>\n\
 EXPOSE 80
 
 # Create startup script
-RUN echo '#!/bin/bash\n\
-set -e\n\
-\n\
-# Wait for database to be ready\n\
-until pg_isready -h $RENDER2_DB_HOST -p $RENDER2_DB_PORT -U $RENDER2_DB_USERNAME; do\n\
-    echo "Waiting for database..."\n\
-    sleep 2\n\
-done\n\
-\n\
-# Run migrations\n\
-php artisan migrate --force\n\
-\n\
-# Clear and cache config\n\
-php artisan config:cache\n\
-php artisan route:cache\n\
-php artisan view:cache\n\
-\n\
-# Start Apache\n\
-apache2-foreground' > /usr/local/bin/start.sh
+RUN cat <<EOF > /usr/local/bin/start.sh
+#!/bin/bash
+set -e
+
+# Debug: print variables
+echo "RENDER2_DB_HOST=\$RENDER2_DB_HOST"
+echo "RENDER2_DB_PORT=\$RENDER2_DB_PORT"
+echo "RENDER2_DB_USERNAME=\$RENDER2_DB_USERNAME"
+
+# Wait for database to be ready
+until pg_isready -h "\$RENDER2_DB_HOST" -p "\$RENDER2_DB_PORT" -U "\$RENDER2_DB_USERNAME"; do
+    echo "Waiting for database..."
+    sleep 2
+done
+
+# Run migrations
+php artisan migrate --force
+
+# Clear and cache config
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+# Start Apache
+apache2-foreground
+EOF
 
 RUN chmod +x /usr/local/bin/start.sh
 
