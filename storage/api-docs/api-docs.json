@@ -556,7 +556,7 @@
                 }
             }
         },
-        "/v1/comptes/{compteNum}": {
+        "/v1/comptes/{compteId}": {
             "get": {
                 "tags": [
                     "Comptes"
@@ -566,7 +566,7 @@
                 "operationId": "getCompte",
                 "parameters": [
                     {
-                        "name": "compteNum",
+                        "name": "compteId",
                         "in": "path",
                         "description": "ID UUID ou numéro de compte à récupérer",
                         "required": true,
@@ -684,7 +684,7 @@
                                                 },
                                                 "details": {
                                                     "properties": {
-                                                        "compteNum": {
+                                                        "compteId": {
                                                             "type": "string",
                                                             "format": "uuid",
                                                             "example": "550e8400-e29b-41d4-a716-446655440000"
@@ -723,7 +723,7 @@
                                                 },
                                                 "details": {
                                                     "properties": {
-                                                        "compteNum": {
+                                                        "compteId": {
                                                             "type": "string",
                                                             "example": "invalid-id"
                                                         }
@@ -784,7 +784,7 @@
                 "operationId": "updateCompte",
                 "parameters": [
                     {
-                        "name": "compteNum",
+                        "name": "compteId",
                         "in": "path",
                         "description": "ID UUID ou numéro de compte à mettre à jour",
                         "required": true,
@@ -1048,7 +1048,7 @@
                 "operationId": "deleteCompte",
                 "parameters": [
                     {
-                        "name": "compteNum",
+                        "name": "compteId",
                         "in": "path",
                         "description": "ID UUID ou numéro de compte à supprimer",
                         "required": true,
@@ -1074,7 +1074,7 @@
                                         },
                                         "data": {
                                             "properties": {
-                                                "compteNum": {
+                                                "compteId": {
                                                     "type": "string",
                                                     "format": "uuid",
                                                     "example": "550e8400-e29b-41d4-a716-446655440000"
@@ -1225,7 +1225,7 @@
                 ]
             }
         },
-        "/v1/comptes/{compteNum}/block": {
+        "/v1/comptes/{compteId}/block": {
             "post": {
                 "tags": [
                     "Comptes"
@@ -1235,7 +1235,7 @@
                 "operationId": "blockCompte",
                 "parameters": [
                     {
-                        "name": "compteNum",
+                        "name": "compteId",
                         "in": "path",
                         "description": "ID UUID ou numéro de compte à bloquer",
                         "required": true,
@@ -1285,7 +1285,7 @@
                                         },
                                         "data": {
                                             "properties": {
-                                                "compteNum": {
+                                                "compteId": {
                                                     "type": "string",
                                                     "format": "uuid",
                                                     "example": "550e8400-e29b-41d4-a716-446655440000"
