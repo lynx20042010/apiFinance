@@ -70,14 +70,23 @@ RUN cat <<EOF > /usr/local/bin/start.sh
 #!/bin/bash
 set -e
 
-# Debug: print variables
+# Debug: print variables for both databases
 echo "RENDER2_DB_HOST=\$RENDER2_DB_HOST"
 echo "RENDER2_DB_PORT=\$RENDER2_DB_PORT"
 echo "RENDER2_DB_USERNAME=\$RENDER2_DB_USERNAME"
+echo "RENDER3_DB_HOST=\$RENDER3_DB_HOST"
+echo "RENDER3_DB_PORT=\$RENDER3_DB_PORT"
+echo "RENDER3_DB_USERNAME=\$RENDER3_DB_USERNAME"
 
-# Wait for database to be ready
+# Wait for RENDER2 database to be ready
 until pg_isready -h "\$RENDER2_DB_HOST" -p "\$RENDER2_DB_PORT" -U "\$RENDER2_DB_USERNAME"; do
-    echo "Waiting for database..."
+    echo "Waiting for RENDER2 database..."
+    sleep 2
+done
+
+# Wait for RENDER3 database to be ready
+until pg_isready -h "\$RENDER3_DB_HOST" -p "\$RENDER3_DB_PORT" -U "\$RENDER3_DB_USERNAME"; do
+    echo "Waiting for RENDER3 database..."
     sleep 2
 done
 
