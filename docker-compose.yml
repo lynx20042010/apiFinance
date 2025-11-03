@@ -23,16 +23,9 @@ services:
       - RENDER3_DB_DATABASE=apifinancedb
       - RENDER3_DB_USERNAME=apifinancedb_user
       - RENDER3_DB_PASSWORD=secure_password2
-      # Redis
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - CACHE_STORE=redis
-      - QUEUE_CONNECTION=redis
-      - SESSION_DRIVER=redis
     depends_on:
       - db2
       - db3
-      - redis
     volumes:
       - ./storage:/var/www/html/storage
     networks:
@@ -64,19 +57,9 @@ services:
     networks:
       - apifinance
 
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - apifinance
-
 volumes:
   postgres_data2:
   postgres_data3:
-  redis_data:
 
 networks:
   apifinance:
