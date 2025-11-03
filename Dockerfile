@@ -93,11 +93,11 @@ until pg_isready -h "$DB_SECOND_HOST" -p "$DB_SECOND_PORT" -U "$DB_SECOND_USERNA
     sleep 2
 done
 
-# Run migrations on first database
-php artisan migrate --force
+# Migrations pour la base principale
+php artisan migrate --database=render2 --force
 
-# Run migrations on second database
-php artisan migrate --database=second_connection --force
+# Migrations pour la base secondaire
+php artisan migrate --database=render3 --force
 
 # Cache config, routes, views
 php artisan config:cache
