@@ -3,7 +3,7 @@ services:
     name: api-finance-app
     runtime: docker
     buildCommand: docker build -t api-finance .
-    startCommand: docker run -p $PORT:80 --env-file .env api-finance
+    startCommand: docker run -p $PORT:80 --env-file .env -e RENDER2_DB_HOST=$RENDER2_DB_HOST -e RENDER2_DB_PORT=$RENDER2_DB_PORT -e RENDER2_DB_USERNAME=$RENDER2_DB_USERNAME -e RENDER2_DB_PASSWORD=$RENDER2_DB_PASSWORD -e RENDER3_DB_HOST=$RENDER3_DB_HOST -e RENDER3_DB_PORT=$RENDER3_DB_PORT -e RENDER3_DB_USERNAME=$RENDER3_DB_USERNAME -e RENDER3_DB_PASSWORD=$RENDER3_DB_PASSWORD api-finance
     envVars:
       - key: APP_ENV
         value: production

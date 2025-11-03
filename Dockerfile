@@ -73,22 +73,22 @@ RUN cat <<'EOF' > /usr/local/bin/start.sh
 set -e
 
 # Debug: print variables
-echo "DB1_HOST=$DB_HOST"
-echo "DB1_PORT=$DB_PORT"
-echo "DB1_USER=$DB_USERNAME"
+echo "DB1_HOST=$RENDER2_DB_HOST"
+echo "DB1_PORT=$RENDER2_DB_PORT"
+echo "DB1_USER=$RENDER2_DB_USERNAME"
 
-echo "DB2_HOST=$DB_SECOND_HOST"
-echo "DB2_PORT=$DB_SECOND_PORT"
-echo "DB2_USER=$DB_SECOND_USERNAME"
+echo "DB2_HOST=$RENDER3_DB_HOST"
+echo "DB2_PORT=$RENDER3_DB_PORT"
+echo "DB2_USER=$RENDER3_DB_USERNAME"
 
 # Wait for first database
-until pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USERNAME"; do
+until pg_isready -h "$RENDER2_DB_HOST" -p "$RENDER2_DB_PORT" -U "$RENDER2_DB_USERNAME"; do
     echo "Waiting for database 1..."
     sleep 2
 done
 
 # Wait for second database
-until pg_isready -h "$DB_SECOND_HOST" -p "$DB_SECOND_PORT" -U "$DB_SECOND_USERNAME"; do
+until pg_isready -h "$RENDER3_DB_HOST" -p "$RENDER3_DB_PORT" -U "$RENDER3_DB_USERNAME"; do
     echo "Waiting for database 2..."
     sleep 2
 done
